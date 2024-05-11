@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaderboard</title>
+    <link id="csslight" rel="stylesheet" type="text/css" href="leaderboardStyleLight.css">
+    <link id="csspink"  rel="stylesheet" type="text/css" href="leaderboardStylePink.css">
+    <link id="cssdark"  rel="stylesheet" type="text/css" href="leaderboardStyleDark.css">
+</head>
+<body>
+    <script>
+        function setCookie(name,value,days=3650) {
+            var expires = "";
+            if (days) {
+                var date = new Date();
+                date.setTime(date.getTime() + (days*24*60*60*1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            document.cookie = name + "=" + (value || "") + expires + "; path=/";
+        }
+
+        function getCookie(name) {
+            var nameEQ = name + "=";
+            var ca = document.cookie.split(';');
+            for(var i=0;i < ca.length;i++) {
+                var c = ca[i];
+                while (c.charAt(0)==' ') c = c.substring(1,c.length);
+                if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+            }
+            return null;
+        }
+
+function setThemeCookie(){
+    var currentMode = getCookie("theme");
+
+    if(!currentMode){
+        currentMode = "dark"; // assume dark by default
+    }
+
+    // the cycle goes Dark -> Light -> Pink -> Dark
+
+    if (currentMode == "light") {
+        setCookie("theme", "pink");
+    } else if (currentMode == "dark") {
+        setCookie("theme", "light");
+    } else {
+        setCookie("theme", "dark");
+    }
+
+    setStyle();
+}
+
+function setStyle(){
+    savedStyle = getCookie("theme");
+    if (savedStyle == "light") {
+        document.getElementById("cssdark").setAttribute("disabled", "disabled");
+        document.getElementById("csslight").removeAttribute("disabled");
+        document.getElementById("csspink").setAttribute("disabled", "disabled");
+    } else if (savedStyle == "pink") {
+        document.getElementById("csslight").setAttribute("disabled", "disabled");
+        document.getElementById("cssdark").setAttribute("disabled", "disabled");
+        document.getElementById("csspink").removeAttribute("disabled");
+    } else { // be dark by default
+        document.getElementById("csslight").setAttribute("disabled", "disabled");
+        document.getElementById("cssdark").removeAttribute("disabled");
+        document.getElementById("csspink").setAttribute("disabled", "disabled");
+    }
+}
+        window.onload = setStyle;
+    </script>
+    <header>
+        <div class = "title-container">
+            <a href="https://sponsor.ajay.app/"><img class="SBlogo" src = "https://sponsor.ajay.app/LogoSponsorBlockSimple256px.png"></a>
+            <h1>SponsorBlock Leaderboard</h1>
+            <input type="button" value="Toggle Theme" class="themeToggle" onclick="setThemeCookie()">
+        </div>
+    </header>
+    <table class="globalStats">
+        <tr>
+            <th colspan="2" style="text-align: center; width:160px">Global Stats</th>
+        </tr>
+        <tr title="Number of users with at least one non-removed segment">
+            <td style="text-align: left;">Contributing Users:</td>
+            <td style="text-align: left;">{{f"{int(global_stats['contributing_users']):,}"}}</td>
+        </tr>
+        <tr title="All segments, of all categories, removed and non-removed">
+            <td style="text-align: left;">Total Submissions:</td>
+            <td style="text-align: left;">{{f"{int(global_stats['overall_submissions']):,}"}}</td>
+        </tr>
+        <tr title="Time saved across non-removed, skippable segments">
+            <td style="text-align: left;">Time Saved:</td>
+            <td style="text-align: left;">{{global_stats['overall_time_saved']}}</td>
+        </tr>
+        <tr title="Number of skips on non-removed, skippable segments">
+            <td style="text-align: left;">Total Skips:</td>
+            <td style="text-align: left;">{{f"{int(global_stats['overall_skips']):,}"}}</td>
+        </tr>
+        <tr title="Number of segments which have been removed, either by user votes or by a VIP">
+            <td style="text-align: left;">Removed Segments:</td>
+            <td style="text-align: left;">{{f"{int(global_stats['removed_submissions']):,}"}}</td>
+        </tr>
+    </table>
+    <table class="userstats">
+        <tr>
+            <th>Rank</th>
+            <th title="UserID is shown where the username is not set.">Username</th>
+            <th><a class="hiddenlink" title="Click to sort by submissions. Only counts non-removed segments." href="?sort=Submissions">Submissions</a></th>
+            <th><a class="hiddenlink" title="Click to sort by skips. Skips only count if the segment is not removed." href="?sort=Skips">Total Skips</a></th>
+            <th><a class="hiddenlink" title="Click to sort by time saved. Time Saved is the sum of views*duration across non-removed skippable segments." href="?sort=Time">Time Saved</a></th>
+            <th><a class="hiddenlink" title="Click to sort by net votes. Net Votes is the sum of upvotes and downvotes on segments submitted after September 2020." href="?sort=Votes">Net Votes</a></th>
+        </tr>
+        % for user_row in users:
+            <tr>
+                <td>{{user_row['rank']}}</td>
+                <td><a href="{{user_row['url']}}">{{user_row['username']}}</a></td>
+                <td>{{user_row['submissions']}}</td>
+                <td title="Average of {{user_row['skips_per_seg']}} per submission">{{user_row['skips'] }}</td>
+                <td title="Average of {{user_row['time_per_seg']}} per submission">{{user_row['time_saved']}}</td>
+                <td title="Average of {{user_row['votes_per_seg']}} per submission">{{user_row['votes']}}</td>
+            </tr>
+        % end
+    </table>
+    <div class="attribution">
+        Leaderboard data was last updated {{last_updated}} UTC. Uses SponsorBlock data licensed used under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> from <a href="https://sponsor.ajay.app/">https://sponsor.ajay.app/</a>.
+    </div>
+</body>
+</html>
