@@ -16,14 +16,16 @@ current_platform = platform.system()
 
 if current_platform == "Darwin":  # macOS
 	archive_location = "download/archive"
-elif current_platform == "Linux":
-	archive_location = "/mnt/whitebox/download/archive"
+elif current_platform == "Linux": # raspberrypi (or EC2 now?)
+	archive_location = "/mnt/WhiteBox/SponsorBlock/download/archive"
 else:
 	raise ValueError(f"Unknown platform: {current_platform}")
 
-log("Deleting old database versions..")
 
 today = datetime.now()
+
+"""
+log("Deleting old database versions..")
 
 def days_since(date_string):
 	return (datetime.now() - datetime.strptime(date_string, "%d%m%Y")).days
@@ -46,6 +48,7 @@ try:
 			log(f"Skipping file - unable to parse filename: {filename}")
 except OSError as ex:
 	log("Could not update archive - " + str(ex))
+"""
 
 compressed_segs_server_path = "https://sb.minibomba.pro/mirror/sponsorTimes.csv.zst"
 compressed_names_server_path = "https://sb.minibomba.pro/mirror/userNames.csv.zst"
@@ -114,7 +117,7 @@ if proceed:
 		names_filename_uncompressed = "userNames.csv"
 
 		log("Copying today's database to the archive..")
-		today_string = today.strftime("%d%m%Y")
+		today_string = today.strftime("%Y-%m-%d")
 		try:
 			os.system(f"sudo cp download/{segs_filename_uncompressed} {archive_location}/{today_string}_{segs_filename_uncompressed}")
 			os.system(f"sudo cp download/{names_filename_uncompressed} {archive_location}/{today_string}_{names_filename_uncompressed}")

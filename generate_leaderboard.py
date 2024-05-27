@@ -140,7 +140,6 @@ del user_list
 
 # Merge the users from each top list into a set to prevent counting any user more than once
 top_users = set(top_submissions + top_skips + top_time_saved + top_votes)
-print(f"Ignored votes on {ignored_votes} segments")
 
 print("Writing output to file..")
 line_num = 0
