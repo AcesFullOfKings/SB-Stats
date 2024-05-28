@@ -10,3 +10,5 @@ log_old.txt
 SankeyMatic config.txt
 leaderboard.csv
 download/**
+data/**
+.vs/

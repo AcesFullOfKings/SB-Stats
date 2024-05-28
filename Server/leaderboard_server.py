@@ -1,6 +1,7 @@
-from bottle import route, template, default_app, request, static_file, request
+from bottle import route, template, default_app, request, static_file, request, error, HTTPResponse
 from datetime import datetime
 import platform
+import os
 
 current_platform = platform.system()
 
@@ -8,8 +9,12 @@ if current_platform == "Darwin":  # macOS
 	file_location = ""
 elif current_platform == "Linux": # cloud server
 	file_location = "/home/AcesFullOfKings/server/"
+elif current_platform == "Windows":
+	file_location = "D:\\Stuff\\Code\\git\\SB-Stats"
 else:
 	raise ValueError(f"Unknown platform: {current_platform}")
+
+data_location = os.path.join(file_location, "data")
 
 del platform
 
@@ -231,6 +236,39 @@ def get_global_stats():
 	global_stats["removed_submissions"] = file_data[4]
 
 	return global_stats
+
+@route("/leaderboard.json")
+def serve_leaderboard():
+	try:
+		file_date = request.headers["file_date"]
+	except KeyError:
+		# no file date requested - send today's file
+		return static_file("leaderboard.json", root=data_location)
+	
+	global_stats_location = os.path.join(data_location, "Leaderboard")
+	filepath = os.path.join(global_stats_location, file_date + "_leaderboard.json")
+	
+	if os.path.exists(filepath):
+		return static_file(filepath, root=data_location)
+	else:
+		return HTTPResponse(body="Not Found", status=404, headers=None)
+
+@route("/global_stats.json")
+def serve_global_stats():
+	try:
+		file_date = request.headers["file_date"]
+	except KeyError:
+		# no file date requested - send today's file
+		return static_file("global_stats.json", root=data_location)
+	
+	global_stats_location = os.path.join(data_location, "Global Stats")
+	filepath = os.path.join(global_stats_location, file_date + "_global_stats.json")
+	
+	if os.path.exists(filepath):
+		return static_file(filepath, root=data_location)
+	else:
+		return HTTPResponse(body="Not Found", status=404, headers=None)
+
 
 @route("/leaderboardStyleLight.css")
 def css_light():
