@@ -9,7 +9,20 @@ usernames.csv:    userID,userName,locked
 """
 
 import csv
+import json
+
 from time import time
+from sys import argv
+
+try:
+	sponsorTimes_path = argv[1]
+except IndexError:
+	sponsorTimes_path = "download/sponsorTimes.csv"
+	
+try:
+	userNames_path = argv[2]
+except IndexError:
+	userNames_path = "download/userNames.csv"
 
 auto_upvotes_endtime = 1598989542
 start_time=time()
@@ -29,7 +42,7 @@ removed_submissions = 0
 
 
 # set up segs reader:
-sponsortimes = open("download/sponsorTimes.csv", "r")
+sponsortimes = open(sponsorTimes_path, "r", encoding="utf-8")
 first_row = sponsortimes.readline() # discard this so it's not processed in the loop below
 del first_row
 
@@ -38,7 +51,7 @@ segment_reader = csv.DictReader(sponsortimes, fieldnames=sponsortimes_field_name
 
 
 #set up users reader:
-usernames = open("download/userNames.csv", "r")
+usernames = open(userNames_path, "r", encoding="utf-8")
 first_row = usernames.readline() # discard this so it's not processed in the loop below
 del first_row
 
@@ -93,6 +106,7 @@ for segment in segment_reader:
 		removed_submissions += 1
 
 	line_num += 1
+
 	if not line_num%1_000_000:
 		print(f"Processing line {line_num}")
 
@@ -112,7 +126,7 @@ for user_row in username_reader:
 	user_name = user_row["userName"]
 	#locked    = user_row["locked"]
 
-	if userID in users:
+	if userID != user_name and userID in users:
 		users[userID]["username"] = user_name
 	
 	line_num += 1
@@ -123,20 +137,20 @@ for user_row in username_reader:
 usernames.close() # finished with this
 
 #convert dict to list of tuples (for easier sorting below)
-user_list=[]
+user_tuples=[]
 while users:
 	user_id, user_info = users.popitem() # returns and deletes the next item from users as a tuple of (key, value)
 	user_tuple = (user_id, user_info["username"], user_info["submissions"], user_info["total_skips"], user_info["time_saved"], user_info["total_votes"])
-	user_list.append(user_tuple)
+	user_tuples.append(user_tuple)
 
 del users
 
-top_submissions = sorted(user_list, key=lambda x: x[2], reverse=True)[:200]
-top_skips       = sorted(user_list, key=lambda x: x[3], reverse=True)[:200]
-top_time_saved  = sorted(user_list, key=lambda x: x[4], reverse=True)[:200]
-top_votes       = sorted(user_list, key=lambda x: x[5], reverse=True)[:200]
+top_submissions = sorted(user_tuples, key=lambda x: x[2], reverse=True)[:200]
+top_skips       = sorted(user_tuples, key=lambda x: x[3], reverse=True)[:200]
+top_time_saved  = sorted(user_tuples, key=lambda x: x[4], reverse=True)[:200]
+top_votes       = sorted(user_tuples, key=lambda x: x[5], reverse=True)[:200]
 
-del user_list
+del user_tuples
 
 # Merge the users from each top list into a set to prevent counting any user more than once
 top_users = set(top_submissions + top_skips + top_time_saved + top_votes)
@@ -144,28 +158,40 @@ top_users = set(top_submissions + top_skips + top_time_saved + top_votes)
 print("Writing output to file..")
 line_num = 0
 
-with open("leaderboard.csv", "w") as f:
-	for user in top_users:
-		user_id     = user[0]
-		username    = user[1].replace(",", "") # no commas, bad
-		submissions = user[2]
-		skips       = user[3]
-		time_saved  = round(user[4])
-		votes       = user[5]
+leaderboard = []
 
-		f.write(f"{user_id},{username},{submissions},{skips},{time_saved},{votes}\n")
+for user in top_users:
+	user_id     = user[0]
+	username    = user[1].replace(",", "") # no commas, bad
+	submissions = user[2]
+	skips       = user[3]
+	time_saved  = round(user[4])
+	votes       = user[5]
 
-		line_num += 1
-		
-		if not line_num%100:
-			print(f"Writing line {line_num}")
+	user_data = {
+		"ID":user_id,
+		"name":username,
+		"submissions":submissions,
+		"skips":skips,
+		"saved":time_saved,
+		"votes":votes,
+		}
+	
+	leaderboard.append(user_data)
+	
+with open("leaderboard.json", "w") as f:
+	json.dump(leaderboard, f)
 
-with open("global_stats.txt", "w") as f:
-	f.write(str(contributing_users) + "\n")
-	f.write(str(overall_submissions) + "\n")
-	f.write(str(overall_time_saved) + "\n")
-	f.write(str(overall_skips) + "\n")
-	f.write(str(removed_submissions) + "\n")
-	f.write(str(active_users) + "\n")
+global_stats = {
+	"contributing_users" : contributing_users,
+	"overall_submissions": overall_submissions ,
+	"overall_time_saved" : overall_time_saved,
+	"overall_skips"      : overall_skips,
+	"removed_submissions": removed_submissions,
+	"active_users"       : active_users,
+}
+
+with open("global_stats.json", "w") as f:
+	json.dump(global_stats, f)
 
 print("Done!")
