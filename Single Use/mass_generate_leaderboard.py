@@ -1,6 +1,7 @@
 import os
 import subprocess
 from datetime import datetime
+from time import time
 
 home_path   = "D:\Stuff\Code\git\SB-Stats"
 
@@ -9,6 +10,8 @@ output_path = "D:\Stuff\Code\git\SB-Stats\data"
 
 sponsorTimes_source = os.path.join(source_path, "sponsorTimes")
 userNames_source    = os.path.join(source_path, "userNames")
+
+last_timecheck = time()
 
 for item in os.walk(sponsorTimes_source):
 	dir, folders, files = item
@@ -37,3 +40,6 @@ for item in os.walk(sponsorTimes_source):
 					
 					if os.path.exists(new_globals_path):
 						os.rename(new_globals_path, dest_globals_path)
+						
+					print("Time taken : " + str(round(time() - last_timecheck, 1)))
+					last_timecheck = time()

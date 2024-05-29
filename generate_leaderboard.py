@@ -8,11 +8,16 @@ usernames.csv:    userID,userName,locked
 				  315k rows
 """
 
+import os
 import csv
 import json
+import platform
 
-from time import time
-from sys import argv
+from sys      import argv
+from time     import time
+from config   import data_path
+from datetime import datetime
+
 
 try:
 	sponsorTimes_path = argv[1]
@@ -24,13 +29,9 @@ try:
 except IndexError:
 	userNames_path = "download/userNames.csv"
 
+
 auto_upvotes_endtime = 1598989542
 start_time=time()
-
-""" 
-# prob do this on a separate page in future, maybe use pie charts and stuff.
-# Maybe like, pie charts for seg distribution %s in the last day/month/year/all
-"""
 
 # overall global stats:
 overall_users       = 0
@@ -193,5 +194,20 @@ global_stats = {
 
 with open("global_stats.json", "w") as f:
 	json.dump(global_stats, f)
+
+today_string = datetime.now().strftime("%Y-%m-%d")
+
+leaderboard_history_folder = os.path.join(data_path, "leaderboard")
+globalstats_history_folder = os.path.join(data_path, "Global Stats")
+
+today_leaderboard_filename = os.path.join(leaderboard_history_folder, {today_string}_leaderboard.json)
+today_globalstats_filename = os.path.join(globalstats_history_folder, {today_string}_global_stats.json)
+
+if current_platform != "Windows":
+	os.system(f"sudo cp leaderboard.json {today_leaderboard_filename}")
+	os.system(f"sudo cp global_stats.json {today_globalstats_filename}")
+else:
+	os.system(f"copy leaderboard.json {today_leaderboard_filename}")
+	os.system(f"copy global_stats.json {today_globalstats_filename}")
 
 print("Done!")
