@@ -35,8 +35,8 @@ if __name__ == "__main__":
 
 		if r2 == 0:
 			log("Updating PythonAnywhere..")
-			r3 = os.system("python updatePAfile.py")
-			log(f"updatePAfile result was {r3}")
+			r3 = os.system("python update_PA.py")
+			log(f"update_PA result was {r3}")
 		else:
 			log("Failed when running generate_leaderboard.py")
 	else:

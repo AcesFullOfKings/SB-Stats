@@ -29,43 +29,204 @@
             return null;
         }
 
-function setThemeCookie(){
-    var currentMode = getCookie("theme");
+        function setThemeCookie(){
+            var currentMode = getCookie("theme");
 
-    if(!currentMode){
-        currentMode = "dark"; // assume dark by default
-    }
+            if(!currentMode){
+                currentMode = "dark"; // assume dark by default
+            }
 
-    // the cycle goes Dark -> Light -> Pink -> Dark
+            // the cycle goes Dark -> Light -> Pink -> Dark
 
-    if (currentMode == "light") {
-        setCookie("theme", "pink");
-    } else if (currentMode == "dark") {
-        setCookie("theme", "light");
-    } else {
-        setCookie("theme", "dark");
-    }
+            if (currentMode == "light") {
+                setCookie("theme", "pink");
+            } else if (currentMode == "dark") {
+                setCookie("theme", "light");
+            } else {
+                setCookie("theme", "dark");
+            }
 
-    setStyle();
-}
+            setStyle();
+        }
 
-function setStyle(){
-    savedStyle = getCookie("theme");
-    if (savedStyle == "light") {
-        document.getElementById("cssdark").setAttribute("disabled", "disabled");
-        document.getElementById("csslight").removeAttribute("disabled");
-        document.getElementById("csspink").setAttribute("disabled", "disabled");
-    } else if (savedStyle == "pink") {
-        document.getElementById("csslight").setAttribute("disabled", "disabled");
-        document.getElementById("cssdark").setAttribute("disabled", "disabled");
-        document.getElementById("csspink").removeAttribute("disabled");
-    } else { // be dark by default
-        document.getElementById("csslight").setAttribute("disabled", "disabled");
-        document.getElementById("cssdark").removeAttribute("disabled");
-        document.getElementById("csspink").setAttribute("disabled", "disabled");
-    }
-}
-        window.onload = setStyle;
+        function setStyle(){
+            savedStyle = getCookie("theme");
+            if (savedStyle == "light") {
+                document.getElementById("cssdark").setAttribute("disabled", "disabled");
+                document.getElementById("csslight").removeAttribute("disabled");
+                document.getElementById("csspink").setAttribute("disabled", "disabled");
+            } else if (savedStyle == "pink") {
+                document.getElementById("csslight").setAttribute("disabled", "disabled");
+                document.getElementById("cssdark").setAttribute("disabled", "disabled");
+                document.getElementById("csspink").removeAttribute("disabled");
+            } else { // be dark by default
+                document.getElementById("csslight").setAttribute("disabled", "disabled");
+                document.getElementById("cssdark").removeAttribute("disabled");
+                document.getElementById("csspink").setAttribute("disabled", "disabled");
+            }
+        }
+
+        function populateGlobalStats() {
+            fetch('global_stats.json')
+                .then(response => response.json())
+                .then(data => {
+                    // Convert time saved from seconds to years and days
+                    const secondsInAYear = 60 * 60 * 24 * 365;
+                    const secondsInADay = 60 * 60 * 24;
+
+                    const years = Math.floor(data.overall_time_saved / secondsInAYear);
+                    const days = Math.floor((data.overall_time_saved % secondsInAYear) / secondsInADay);
+
+                    // Populate the table with data
+                    document.querySelector('table.globalStats tr:nth-child(2) td:nth-child(2)').textContent = data.contributing_users.toLocaleString();
+                    document.querySelector('table.globalStats tr:nth-child(3) td:nth-child(2)').textContent = data.overall_submissions.toLocaleString();
+                    document.querySelector('table.globalStats tr:nth-child(4) td:nth-child(2)').textContent = `${years}y ${days}d`;
+                    document.querySelector('table.globalStats tr:nth-child(5) td:nth-child(2)').textContent = data.overall_skips.toLocaleString();
+                    document.querySelector('table.globalStats tr:nth-child(6) td:nth-child(2)').textContent = data.removed_submissions.toLocaleString();
+                })
+                .catch(error => console.error('Error fetching global stats:', error));
+        }
+
+        let leaderboardData = [];
+
+        // Function to fetch and populate the user stats table
+        function populateLeaderboard(sortBy = 'submissions') {
+            if (leaderboardData.length === 0) {
+                fetch('leaderboard.json')
+                    .then(response => response.json())
+                    .then(data => {
+                        leaderboardData = data;
+                        updateTable(sortBy);
+                    })
+                    .catch(error => console.error('Error fetching user stats:', error));
+            } else {
+                updateTable(sortBy);
+            }
+        }
+
+        function updateTable(sortBy) {
+            // Sort the data based on the selected column
+            leaderboardData.sort((a, b) => b[sortBy] - a[sortBy]);
+
+            // Get the top 200 users
+            const top200Users = leaderboardData.slice(0, 200);
+
+            // Clear the existing table rows
+            const leaderboardTable = document.querySelector('table.leaderboard');
+            leaderboardTable.innerHTML = `
+                <tr>
+                    <th>Rank</th>
+                    <th title="UserID is shown where the username is not set.">Username</th>
+                    <th><a class="hiddenlink" title="Click to sort by submissions. Only counts non-removed segments." href="#" onclick="sortTable('submissions')">Submissions</a></th>
+                    <th><a class="hiddenlink" title="Click to sort by skips. Skips only count if the segment is not removed." href="#" onclick="sortTable('skips')">Total Skips</a></th>
+                    <th><a class="hiddenlink" title="Click to sort by time saved. Time Saved is the sum of views*duration across non-removed skippable segments." href="#" onclick="sortTable('saved')">Time Saved</a></th>
+                    <th><a class="hiddenlink" title="Click to sort by net votes. Net Votes is the sum of upvotes and downvotes on segments submitted after September 2020." href="#" onclick="sortTable('votes')">Net Votes</a></th>
+                </tr>
+            `;
+
+            // Populate the table with the sorted data
+            top200Users.forEach((user, index) => {
+                const row = document.createElement('tr');
+
+                // Rank
+                const rankCell = document.createElement('td');
+                rankCell.textContent = index + 1;
+                row.appendChild(rankCell);
+
+                // Username with hyperlink
+                const usernameCell = document.createElement('td');
+                const usernameLink = document.createElement('a');
+                usernameLink.href = `https://sb.ltn.fi/userid/${user.ID}`;
+                usernameLink.textContent = user.name;
+                usernameCell.appendChild(usernameLink);
+                row.appendChild(usernameCell);
+
+                // Submissions
+                const submissionsCell = document.createElement('td');
+                submissionsCell.textContent = user.submissions.toLocaleString();
+                row.appendChild(submissionsCell);
+
+                // Total Skips
+                const skipsCell = document.createElement('td');
+                skipsCell.textContent = user.skips.toLocaleString();
+                row.appendChild(skipsCell);
+
+                // Time Saved (two most significant intervals)
+                const timeSavedCell = document.createElement('td');
+                const timeSaved = formatTimeSaved(user.saved);
+                timeSavedCell.textContent = timeSaved;
+                row.appendChild(timeSavedCell);
+
+                // Net Votes
+                const votesCell = document.createElement('td');
+                votesCell.textContent = user.votes.toLocaleString();
+                row.appendChild(votesCell);
+
+                // Append the row to the table
+                leaderboardTable.appendChild(row);
+            });
+        }
+
+        // Helper function to format time saved
+        function formatTimeSaved(seconds) {
+            const intervals = [
+                { label: 'y', seconds: 31536000 }, // 1 year
+                { label: 'd', seconds: 86400 },    // 1 day
+                { label: 'h', seconds: 3600 },     // 1 hour
+                { label: 'm', seconds: 60 }        // 1 minute
+            ];
+
+            let remainingSeconds = seconds;
+            const result = [];
+
+            for (const interval of intervals) {
+                const intervalCount = Math.floor(remainingSeconds / interval.seconds);
+                if (intervalCount > 0) {
+                    result.push(`${intervalCount}${interval.label}`);
+                    remainingSeconds %= interval.seconds;
+                }
+                if (result.length === 2) break; // Get only the two most significant intervals
+            }
+
+            return result.join(' ');
+        }
+
+        // Function to sort the table by the specified column
+        function sortTable(sortBy) {
+            populateLeaderboard(sortBy);
+        }
+
+        // Helper function to format time saved
+        function formatTime(seconds) {
+            const intervals = [
+                { label: 'y', seconds: 31536000 }, // 1 year
+                { label: 'd', seconds: 86400 },    // 1 day
+                { label: 'h', seconds: 3600 },     // 1 hour
+                { label: 'm', seconds: 60 }        // 1 minute
+            ];
+
+            let remainingSeconds = seconds;
+            const result = [];
+
+            for (const interval of intervals) {
+                const intervalCount = Math.floor(remainingSeconds / interval.seconds);
+                if (intervalCount > 0) {
+                    result.push(`${intervalCount}${interval.label}`);
+                    remainingSeconds %= interval.seconds;
+                }
+                if (result.length === 2) break; // Get only the two most significant intervals
+            }
+
+            return result.join(' ');
+        }
+
+        function loadFuncs(){
+            setStyle()
+            populateLeaderboard()
+            populateGlobalStats()
+        }
+
+        window.onload = loadFuncs;
     </script>
     <header>
         <div class = "title-container">
@@ -80,47 +241,38 @@ function setStyle(){
         </tr>
         <tr title="Number of users with at least one non-removed segment">
             <td style="text-align: left;">Contributing Users:</td>
-            <td style="text-align: left;">{{f"{int(global_stats['contributing_users']):,}"}}</td>
+            <td style="text-align: left;"></td>
         </tr>
         <tr title="All segments, of all categories, removed and non-removed">
             <td style="text-align: left;">Total Submissions:</td>
-            <td style="text-align: left;">{{f"{int(global_stats['overall_submissions']):,}"}}</td>
+            <td style="text-align: left;"></td>
         </tr>
         <tr title="Time saved across non-removed, skippable segments">
             <td style="text-align: left;">Time Saved:</td>
-            <td style="text-align: left;">{{global_stats['overall_time_saved']}}</td>
+            <td style="text-align: left;"></td>
         </tr>
         <tr title="Number of skips on non-removed, skippable segments">
             <td style="text-align: left;">Total Skips:</td>
-            <td style="text-align: left;">{{f"{int(global_stats['overall_skips']):,}"}}</td>
+            <td style="text-align: left;"></td>
         </tr>
         <tr title="Number of segments which have been removed, either by user votes or by a VIP">
             <td style="text-align: left;">Removed Segments:</td>
-            <td style="text-align: left;">{{f"{int(global_stats['removed_submissions']):,}"}}</td>
+            <td style="text-align: left;"></td>
         </tr>
     </table>
-    <table class="userstats">
+    <table class="leaderboard">
         <tr>
             <th>Rank</th>
             <th title="UserID is shown where the username is not set.">Username</th>
-            <th><a class="hiddenlink" title="Click to sort by submissions. Only counts non-removed segments." href="?sort=Submissions">Submissions</a></th>
-            <th><a class="hiddenlink" title="Click to sort by skips. Skips only count if the segment is not removed." href="?sort=Skips">Total Skips</a></th>
-            <th><a class="hiddenlink" title="Click to sort by time saved. Time Saved is the sum of views*duration across non-removed skippable segments." href="?sort=Time">Time Saved</a></th>
-            <th><a class="hiddenlink" title="Click to sort by net votes. Net Votes is the sum of upvotes and downvotes on segments submitted after September 2020." href="?sort=Votes">Net Votes</a></th>
+            <th><a class="hiddenlink" title="Click to sort by submissions. Only counts non-removed segments." href="#" onclick="sortTable('submissions')">Submissions</a></th>
+            <th><a class="hiddenlink" title="Click to sort by skips. Skips only count if the segment is not removed." href="#" onclick="sortTable('skips')">Total Skips</a></th>
+            <th><a class="hiddenlink" title="Click to sort by time saved. Time Saved is the sum of views*duration across non-removed skippable segments." href="#" onclick="sortTable('saved')">Time Saved</a></th>
+            <th><a class="hiddenlink" title="Click to sort by net votes. Net Votes is the sum of upvotes and downvotes on segments submitted after September 2020." href="#" onclick="sortTable('votes')">Net Votes</a></th>
         </tr>
-        % for user_row in users:
-            <tr>
-                <td>{{user_row['rank']}}</td>
-                <td><a href="{{user_row['url']}}">{{user_row['username']}}</a></td>
-                <td>{{user_row['submissions']}}</td>
-                <td title="Average of {{user_row['skips_per_seg']}} per submission">{{user_row['skips'] }}</td>
-                <td title="Average of {{user_row['time_per_seg']}} per submission">{{user_row['time_saved']}}</td>
-                <td title="Average of {{user_row['votes_per_seg']}} per submission">{{user_row['votes']}}</td>
-            </tr>
-        % end
+
     </table>
     <div class="attribution">
-        Leaderboard data was last updated {{last_updated}} UTC. Uses SponsorBlock data licensed used under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> from <a href="https://sponsor.ajay.app/">https://sponsor.ajay.app/</a>.
+        Leaderboard data was last updated {{last_updated}} UTC. This page uses SponsorBlock data licensed used under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> from <a href="https://sponsor.ajay.app/">https://sponsor.ajay.app/</a>.
     </div>
 </body>
 </html>
