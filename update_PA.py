@@ -13,7 +13,7 @@ def upload_file(source_path, destination_folder, filename):
     headers = {"Authorization": f"Token {PA_token}"}
     files = {"content": (filename, file_contents)}
 
-    response = requests.post(url, headers=headers, files=files)
+    response = requests.post(upload_url, headers=headers, files=files)
 
     if response.status_code in [200, 201]: # either created or updated
         print(f"File \"{filename}\" uploaded successfully to {destination_folder}")
@@ -28,6 +28,11 @@ leaderboard_local_path = os.path.join(data_path, "leaderboard.json")
 globalstats_local_path = os.path.join(data_path, "global_stats.json")
 lastupdate_local_path  = os.path.join(data_path, "last_db_update.txt")
 
-server_base_path = "/server"
+server_data_path = "/home/AcesFullOfKings/server/data"
 
-upload_file(leaderboard_local_path, server_base_path+"/data", "leaderboard.json")
+upload_file(leaderboard_local_path, server_data_path}, "leaderboard.json")
+upload_file(globalstats_local_path, server_data_path}, "global_stats.json")
+upload_file(lastupdate_local_path, server_data_path}, "last_db_update.txt")
+
+upload_file(leaderboard_local_path, f"{server_data_path}/Leaderboard/", f"{today_string}_leaderboard.json")
+upload_file(globalstats_local_path, f"{server_data_path}/Global Stats/", f"{today_string}_global_stats.json")

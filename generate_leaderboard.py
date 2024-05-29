@@ -200,8 +200,8 @@ today_string = datetime.now().strftime("%Y-%m-%d")
 leaderboard_history_folder = os.path.join(data_path, "leaderboard")
 globalstats_history_folder = os.path.join(data_path, "Global Stats")
 
-today_leaderboard_filename = os.path.join(leaderboard_history_folder, {today_string}_leaderboard.json)
-today_globalstats_filename = os.path.join(globalstats_history_folder, {today_string}_global_stats.json)
+today_leaderboard_filename = os.path.join(leaderboard_history_folder, f"{today_string}_leaderboard.json")
+today_globalstats_filename = os.path.join(globalstats_history_folder, f"{today_string}_global_stats.json")
 
 if current_platform != "Windows":
 	os.system(f"sudo cp leaderboard.json {today_leaderboard_filename}")

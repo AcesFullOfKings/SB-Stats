@@ -42,8 +42,11 @@ if not force_update:
 			except ValueError:
 				log(f"Couldn't convert last_modified to int when reading file header. Header is: {header}")
 
-	with open("last_db_update.txt", "r") as f:
-		local_last_modified = int(f.read())
+	try:
+		with open("last_db_update.txt", "r") as f:
+			local_last_modified = int(f.read())
+	except FileNotFoundError:
+		local_last_modified = 0 # always less than the server's modified time
 
 	print(f"{server_last_modified} ; {local_last_modified}")
 
