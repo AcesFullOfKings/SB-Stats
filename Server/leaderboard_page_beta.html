@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaderboard</title>
+    <link id="csslight" rel="stylesheet" type="text/css" href="leaderboardStyleLight.css">
+    <link id="csspink"  rel="stylesheet" type="text/css" href="leaderboardStylePink.css">
+    <link id="cssdark"  rel="stylesheet" type="text/css" href="leaderboardStyleDark.css">
+</head>
+<body>
+    <script>
+        function setCookie(name,value,days=3650) {
+            var expires = "";
+            if (days) {
+                var date = new Date();
+                date.setTime(date.getTime() + (days*24*60*60*1000));
+                expires = "; expires=" + date.toUTCString();
+            }
+            document.cookie = name + "=" + (value || "") + expires + "; path=/";
+        }
+
+        function getCookie(name) {
+            var nameEQ = name + "=";
+            var ca = document.cookie.split(';');
+            for(var i=0;i < ca.length;i++) {
+                var c = ca[i];
+                while (c.charAt(0)==' ') c = c.substring(1,c.length);
+                if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+            }
+            return null;
+        }
+
+        function setThemeCookie(){
+            var currentMode = getCookie("theme");
+
+            if(!currentMode){
+                currentMode = "dark"; // assume dark by default
+            }
+
+            // the cycle goes Dark -> Light -> Pink -> Dark
+
+            if (currentMode == "light") {
+                setCookie("theme", "pink");
+            } else if (currentMode == "dark") {
+                setCookie("theme", "light");
+            } else {
+                setCookie("theme", "dark");
+            }
+
+            setStyle();
+        }
+
+        function setStyle(){
+            savedStyle = getCookie("theme");
+            if (savedStyle == "light") {
+                document.getElementById("cssdark").setAttribute("disabled", "disabled");
+                document.getElementById("csslight").removeAttribute("disabled");
+                document.getElementById("csspink").setAttribute("disabled", "disabled");
+            } else if (savedStyle == "pink") {
+                document.getElementById("csslight").setAttribute("disabled", "disabled");
+                document.getElementById("cssdark").setAttribute("disabled", "disabled");
+                document.getElementById("csspink").removeAttribute("disabled");
+            } else { // be dark by default
+                document.getElementById("csslight").setAttribute("disabled", "disabled");
+                document.getElementById("cssdark").removeAttribute("disabled");
+                document.getElementById("csspink").setAttribute("disabled", "disabled");
+            }
+        }
+
+        function populateGlobalStats() {
+            fetch('global_stats.json')
+                .then(response => response.json())
+                .then(data => {
+                    // Convert time saved from seconds to years and days
+                    const secondsInAYear = 60 * 60 * 24 * 365;
+                    const secondsInADay = 60 * 60 * 24;
+
+                    const years = Math.floor(data.overall_time_saved / secondsInAYear);
+                    const days = Math.floor((data.overall_time_saved % secondsInAYear) / secondsInADay);
+
+                    // Populate the table with data
+                    document.querySelector('table.globalStats tr:nth-child(2) td:nth-child(2)').textContent = data.contributing_users.toLocaleString();
+                    document.querySelector('table.globalStats tr:nth-child(3) td:nth-child(2)').textContent = data.overall_submissions.toLocaleString();
+                    document.querySelector('table.globalStats tr:nth-child(4) td:nth-child(2)').textContent = `${years}y ${days}d`;
+                    document.querySelector('table.globalStats tr:nth-child(5) td:nth-child(2)').textContent = data.overall_skips.toLocaleString();
+                    document.querySelector('table.globalStats tr:nth-child(6) td:nth-child(2)').textContent = data.removed_submissions.toLocaleString();
+                })
+                .catch(error => console.error('Error fetching global stats:', error));
+        }
+
+        let leaderboardData = [];
+
+        // Function to fetch and populate the user stats table
+        function populateLeaderboard(sortBy = 'submissions') {
+            if (leaderboardData.length === 0) {
+                fetch('leaderboard.json')
+                    .then(response => response.json())
+                    .then(data => {
+                        leaderboardData = data;
+                        updateTable(sortBy);
+                    })
+                    .catch(error => console.error('Error fetching user stats:', error));
+            } else {
+                updateTable(sortBy);
+            }
+        }
+
+        function updateTable(sortBy) {
+            // Sort the data based on the selected column
+            leaderboardData.sort((a, b) => b[sortBy] - a[sortBy]);
+
+            // Get the top 200 users
+            const top200Users = leaderboardData.slice(0, 200);
+
+            // Clear the existing table rows
+            const leaderboardTable = document.querySelector('table.leaderboard');
+            leaderboardTable.innerHTML = `
+                <tr>
+                    <th>Rank</th>
+                    <th title="UserID is shown where the username is not set.">Username</th>
+                    <th><a class="hiddenlink" title="Click to sort by submissions. Only counts non-removed segments." href="#" onclick="sortTable('submissions')">Submissions</a></th>
+                    <th><a class="hiddenlink" title="Click to sort by skips. Skips only count if the segment is not removed." href="#" onclick="sortTable('skips')">Total Skips</a></th>
+                    <th><a class="hiddenlink" title="Click to sort by time saved. Time Saved is the sum of views*duration across non-removed skippable segments." href="#" onclick="sortTable('saved')">Time Saved</a></th>
+                    <th><a class="hiddenlink" title="Click to sort by net votes. Net Votes is the sum of upvotes and downvotes on segments submitted after September 2020." href="#" onclick="sortTable('votes')">Net Votes</a></th>
+                </tr>
+            `;
+
+            // Populate the table with the sorted data
+            top200Users.forEach((user, index) => {
+                const row = document.createElement('tr');
+
+                // Rank
+                const rankCell = document.createElement('td');
+                rankCell.textContent = index + 1;
+                row.appendChild(rankCell);
+
+                // Username with hyperlink
+                const usernameCell = document.createElement('td');
+                const usernameLink = document.createElement('a');
+                usernameLink.href = `https://sb.ltn.fi/userid/${user.ID}`;
+
+                if (user.name.length > 20 && !user.name.includes(" ")) { // good enough heuristic for long usernames which won't split over two lines
+                    let halfLength = Math.floor(user.name.length / 2);
+                    username = user.name.slice(0, halfLength) + "\u200B" + user.name.slice(halfLength); // zero-width space inserted halfway so it can span two lines
+                } else {
+                    username = user.name;
+                }
+
+                usernameLink.textContent = username;
+                usernameCell.appendChild(usernameLink);
+                row.appendChild(usernameCell);
+
+                // Submissions
+                const submissionsCell = document.createElement('td');
+                submissionsCell.textContent = user.submissions.toLocaleString();
+                row.appendChild(submissionsCell);
+
+                // Total Skips
+                const skipsCell = document.createElement('td');
+                skipsCell.textContent = user.skips.toLocaleString();
+                row.appendChild(skipsCell);
+
+                // Time Saved (two most significant intervals)
+                const timeSavedCell = document.createElement('td');
+                const timeSaved = formatTimeSaved(user.saved);
+                timeSavedCell.textContent = timeSaved;
+                row.appendChild(timeSavedCell);
+
+                // Net Votes
+                const votesCell = document.createElement('td');
+                votesCell.textContent = user.votes.toLocaleString();
+                row.appendChild(votesCell);
+
+                // Append the row to the table
+                leaderboardTable.appendChild(row);
+            });
+        }
+
+        // Helper function to format time saved
+        function formatTimeSaved(seconds) {
+            const intervals = [
+                { label: 'y', seconds: 31536000 }, // 1 year
+                { label: 'd', seconds: 86400 },    // 1 day
+                { label: 'h', seconds: 3600 },     // 1 hour
+                { label: 'm', seconds: 60 }        // 1 minute
+            ];
+
+            let remainingSeconds = seconds;
+            const result = [];
+
+            for (const interval of intervals) {
+                const intervalCount = Math.floor(remainingSeconds / interval.seconds);
+                if (intervalCount > 0) {
+                    result.push(`${intervalCount}${interval.label}`);
+                    remainingSeconds %= interval.seconds;
+                }
+                if (result.length === 2) break; // Get only the two most significant intervals
+            }
+
+            return result.join(' ');
+        }
+
+        // Function to sort the table by the specified column
+        function sortTable(sortBy) {
+            populateLeaderboard(sortBy);
+        }
+
+        // Helper function to format time saved
+        function formatTimeSaved(seconds) {
+            const intervals = [
+                { label: 'y', seconds: 31536000 }, // 1 year
+                { label: 'd', seconds: 86400 },    // 1 day
+                { label: 'h', seconds: 3600 },     // 1 hour
+                { label: 'm', seconds: 60 }        // 1 minute
+            ];
+
+            let remainingSeconds = seconds;
+            const result = [];
+
+            for (const interval of intervals) {
+                const intervalCount = Math.floor(remainingSeconds / interval.seconds);
+                if (intervalCount > 0) {
+                    result.push(`${intervalCount}${interval.label}`);
+                    remainingSeconds %= interval.seconds;
+                }
+                if (result.length === 2) break; // Get only the two most significant intervals
+            }
+
+            return result.join(' ');
+        }
+
+        function populateLeaderboardFromDate(date) {
+            // Fetch data based on the selected date
+            fetch('/leaderboard.json', {
+                headers: {
+                    'file-date': date
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`No data found for ${date}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                leaderboardData = data;
+                updateTable('submissions');
+            })
+            .catch(error => {
+                console.error('Error fetching leaderboard data for date:', error);
+                alert(`No leaderboard data found for ${date}`);
+            });
+        }
+
+        window.onload = function(){
+            setStyle();
+            populateGlobalStats();
+            populateLeaderboard();
+        }
+
+    </script>
+
+    <div class="outer">
+        <div class="header">
+            <div class="headerContent">
+                <div class="logo">
+                    <img id="logo" src="SponsorBlockIcon.png" />
+                </div>
+                <div class="headerText">
+                    <h1>Leaderboard</h1>
+                </div>
+            </div>
+        </div>
+        <div class="themeButton">
+            <button id="themeButton" title="Change theme" onclick="setThemeCookie();">Change theme</button>
+        </div>
+        <div class="datePicker">
+            <label for="datePicker">Select Date:</label>
+            <input type="date" id="datePicker" name="datePicker" onchange="populateLeaderboardFromDate(this.value)">
+        </div>
+        <div class="globalStatsSection">
+            <h2>Global Stats</h2>
+            <table class="globalStats">
+                <tr>
+                    <th></th>
+                    <th></th>
+                </tr>
+                <tr>
+                    <td><b>Contributing Users</b></td>
+                    <td>1,234</td>
+                </tr>
+                <tr>
+                    <td><b>Overall Submissions</b></td>
+                    <td>5,678,901</td>
+                </tr>
+                <tr>
+                    <td><b>Overall Time Saved</b></td>
+                    <td>12y 34d</td>
+                </tr>
+                <tr>
+                    <td><b>Overall Skips</b></td>
+                    <td>234,567,890</td>
+                </tr>
+                <tr>
+                    <td><b>Removed Submissions</b></td>
+                    <td>12,345</td>
+                </tr>
+            </table>
+        </div>
+        <div class="leaderboardSection">
+            <h2>Top Users</h2>
+            <table class="leaderboard">
+                <tr>
+                    <th>Rank</th>
+                    <th>Username</th>
+                    <th><a class="hiddenlink" title="Click to sort by submissions. Only counts non-removed segments." href="#" onclick="sortTable('submissions')">Submissions</a></th>
+                    <th><a class="hiddenlink" title="Click to sort by skips. Skips only count if the segment is not removed." href="#" onclick="sortTable('skips')">Total Skips</a></th>
+                    <th><a class="hiddenlink" title="Click to sort by time saved. Time Saved is the sum of views*duration across non-removed skippable segments." href="#" onclick="sortTable('saved')">Time Saved</a></th>
+                    <th><a class="hiddenlink" title="Click to sort by net votes. Net Votes is the sum of upvotes and downvotes on segments submitted after September 2020." href="#" onclick="sortTable('votes')">Net Votes</a></th>
+                </tr>
+                <!-- Table rows will be populated by JavaScript -->
+            </table>
+        </div>
+    </div>
+</body>
+</html>

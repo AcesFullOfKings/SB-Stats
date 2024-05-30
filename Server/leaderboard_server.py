@@ -15,6 +15,14 @@ def leaderboard():
 	last_updated = datetime.fromtimestamp(last_updated).strftime("%d/%m/%y %H:%M")
 	return template(page_path, last_updated=last_updated)
 
+@route("/beta")
+def leaderboard():
+	page_path = os.path.join(home_folder, "leaderboard_page_beta.html")
+
+	last_updated=int(get_last_updated())
+	last_updated = datetime.fromtimestamp(last_updated).strftime("%d/%m/%y %H:%M")
+	return template(page_path, last_updated=last_updated)
+
 @route("/last_db_update")
 def get_last_updated():
 	last_update_location = os.path.join(data_path, "last_db_update.txt")
@@ -70,7 +78,5 @@ def css_pink():
 
 application = default_app()
 
-"""
 if __name__ == "__main__":
-	application.run(host="localhost", port=8080), debug=True, reloader=True)
-"""
+	application.run(host="localhost", port=8080, debug=True, reloader=True)

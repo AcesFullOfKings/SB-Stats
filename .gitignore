@@ -1,7 +1,7 @@
 my_secrets.py
 Server/beta_page.html
 **/.DS_Store
-__pycache__/**
+**/__pycache__/
 generate_leaderboard_multiprocess.py
 global_stats.txt
 last_db_update.txt
@@ -12,4 +12,3 @@ leaderboard.csv
 download/**
 data/**
 .vs/
-/Server/__pycache__
