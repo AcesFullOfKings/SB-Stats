@@ -1,7 +1,6 @@
 import os
 import requests
 
-from config     import data_path
 from datetime   import datetime
 from my_secrets import PA_token, PA_username
 
@@ -24,15 +23,15 @@ base_server_file_path   = f"/home/{PA_username}/server/data"  # Destination path
 files_to_upload = ["leaderboard.json", "global_stats.json"]
 today_string = datetime.now().strftime("%Y-%m-%d")
 
-leaderboard_local_path = os.path.join(data_path, "leaderboard.json")
-globalstats_local_path = os.path.join(data_path, "global_stats.json")
-lastupdate_local_path  = os.path.join(data_path, "last_db_update.txt")
+leaderboard_local_path = "leaderboard.json"
+globalstats_local_path = "global_stats.json"
+lastupdate_local_path  = "last_db_update.txt"
 
 server_data_path = "/home/AcesFullOfKings/server/data"
 
-upload_file(leaderboard_local_path, server_data_path}, "leaderboard.json")
-upload_file(globalstats_local_path, server_data_path}, "global_stats.json")
-upload_file(lastupdate_local_path, server_data_path}, "last_db_update.txt")
+upload_file(leaderboard_local_path, server_data_path, "leaderboard.json")
+upload_file(globalstats_local_path, server_data_path, "global_stats.json")
+upload_file(lastupdate_local_path, server_data_path, "last_db_update.txt")
 
 upload_file(leaderboard_local_path, f"{server_data_path}/Leaderboard/", f"{today_string}_leaderboard.json")
 upload_file(globalstats_local_path, f"{server_data_path}/Global Stats/", f"{today_string}_global_stats.json")
