@@ -12,3 +12,4 @@ leaderboard.csv
 download/**
 data/**
 .vs/
+/Server/__pycache__
