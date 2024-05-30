@@ -15,5 +15,5 @@ elif current_platform == "Windows":
 else:
 	raise ValueError(f"Unknown platform: {current_platform}")
 
-data_path   = os.path.join(home_folder, "Data")
-server_path = os.path.join(home_folder, "Server")
+data_path   = os.path.join(home_folder, "data")
+home_folder = os.path.join(home_folder, "Server")
