@@ -1,0 +1,6 @@
+* Update website front end with a date picker for historic leaderboards/stats
+* Sankey Diagram for global stats
+* Create a user page with per-user stats, graphs over time etc
+* Show an icon for VIP users on the leaderboard
+* Maybe an About or FAQ page explaining how the numbers are produced. It could be linked via like a "Not the numbers you were expecting?" link. 
+

@@ -1,6 +1,7 @@
 import os
-import platform
 import subprocess
+
+from config import archive_path
 from time import time
 from datetime import datetime, timedelta
 from contextlib import suppress
@@ -12,43 +13,7 @@ force_update = "-force" in argv
 if force_update:
 	log("update_local_files.py: Force Update is enabled.")
 
-current_platform = platform.system()
-
-if current_platform == "Darwin":  # macOS
-	archive_location = "download/archive"
-elif current_platform == "Linux": # raspberrypi (or EC2 now?)
-	archive_location = "/mnt/WhiteBox/SponsorBlock/download/archive"
-else:
-	raise ValueError(f"Unknown platform: {current_platform}")
-
-
 today = datetime.now()
-
-"""
-log("Deleting old database versions..")
-
-def days_since(date_string):
-	return (datetime.now() - datetime.strptime(date_string, "%d%m%Y")).days
-
-try:
-	for filename in os.listdir(archive_location):
-		try:
-			file_day   = int(filename[0:2])
-			file_date  = filename[0:8]
-
-			file_age = days_since(file_date)
-
-			if file_age >= 7 and file_day not in [1, 8, 15, 22]:
-				if file_age > 28:
-					os.system(f"sudo rm {archive_location}/{filename}")
-				else:
-					if file_day % 7:
-						os.system(f"sudo rm {archive_location}/{filename}")
-		except ValueError:
-			log(f"Skipping file - unable to parse filename: {filename}")
-except OSError as ex:
-	log("Could not update archive - " + str(ex))
-"""
 
 compressed_segs_server_path = "https://sb.minibomba.pro/mirror/sponsorTimes.csv.zst"
 compressed_names_server_path = "https://sb.minibomba.pro/mirror/userNames.csv.zst"
@@ -77,8 +42,11 @@ if not force_update:
 			except ValueError:
 				log(f"Couldn't convert last_modified to int when reading file header. Header is: {header}")
 
-	with open("last_db_update.txt", "r") as f:
-		local_last_modified = int(f.read())
+	try:
+		with open("last_db_update.txt", "r") as f:
+			local_last_modified = int(f.read())
+	except FileNotFoundError:
+		local_last_modified = 0 # always less than the server's modified time
 
 	print(f"{server_last_modified} ; {local_last_modified}")
 
@@ -119,9 +87,8 @@ if proceed:
 		log("Copying today's database to the archive..")
 		today_string = today.strftime("%Y-%m-%d")
 		try:
-			os.system(f"sudo cp download/{segs_filename_uncompressed} {archive_location}/{today_string}_{segs_filename_uncompressed}")
-			os.system(f"sudo cp download/{names_filename_uncompressed} {archive_location}/{today_string}_{names_filename_uncompressed}")
-			os.system(f"sudo cp leaderboard.csv {archive_location}/{today_string}_leaderboard.csv") # this file hasn't been updated yet!
+			os.system(f"sudo cp download/{segs_filename_uncompressed} {archive_path}/{today_string}_{segs_filename_uncompressed}")
+			os.system(f"sudo cp download/{names_filename_uncompressed} {archive_path}/{today_string}_{names_filename_uncompressed}")
 		except OSError as ex:
 			log("Could not copy files to archive - " + str(ex))
 	else:
