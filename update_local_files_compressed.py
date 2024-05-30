@@ -48,8 +48,6 @@ if not force_update:
 	except FileNotFoundError:
 		local_last_modified = 0 # always less than the server's modified time
 
-	print(f"{server_last_modified} ; {local_last_modified}")
-
 	proceed = local_last_modified < server_last_modified
 else:
 	proceed = True 
