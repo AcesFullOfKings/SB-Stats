@@ -228,28 +228,32 @@
             return result.join(' ');
         }
 
-        function populateLeaderboardFromDate(date) {
-            // Fetch data based on the selected date
-            fetch('/leaderboard.json', {
-                headers: {
-                    'file-date': date
-                }
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`No data found for ${date}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                leaderboardData = data;
-                updateTable('submissions');
-            })
-            .catch(error => {
-                console.error('Error fetching leaderboard data for date:', error);
-                alert(`No leaderboard data found for ${date}`);
-            });
+function populateLeaderboardFromDate(date) {
+    console.log(`Fetching data for date: ${date}`);
+
+    fetch('leaderboard.json', {
+        headers: {
+            'file-date': date,
+            'Cache-Control': 'no-cache'
         }
+    })
+    .then(response => {
+        console.log('Received response:', response);
+        if (!response.ok) {
+            throw new Error(`No data found for ${date}`);
+        }
+        return response.json();
+    })
+    .then(data => {
+        console.log('Data received:', data);
+        leaderboardData = data;
+        updateTable('submissions');
+    })
+    .catch(error => {
+        console.error('Error fetching leaderboard data for date:', error);
+        alert(`No leaderboard data found for ${date}`);
+    });
+}
 
         window.onload = function(){
             setStyle();
@@ -258,68 +262,55 @@
         }
 
     </script>
+    <header>
+        <div class = "title-container">
+            <a href="https://sponsor.ajay.app/"><img class="SBlogo" src = "https://sponsor.ajay.app/LogoSponsorBlockSimple256px.png"></a>
+            <h1>SponsorBlock Leaderboard</h1>
+            <input type="button" value="Toggle Theme" class="themeToggle" onclick="setThemeCookie()">
+        </div>
+    </header>
+    <div class="datePicker">
+        <label for="datePicker">Select Date:</label>
+        <input type="date" id="datePicker" name="datePicker" onchange="populateLeaderboardFromDate(this.value)">
+    </div>
+    <table class="globalStats">
+        <tr>
+            <th colspan="2" style="text-align: center; width:160px">Global Stats</th>
+        </tr>
+        <tr title="Number of users with at least one non-removed segment">
+            <td style="text-align: left;">Contributing Users:</td>
+            <td style="text-align: left;"></td>
+        </tr>
+        <tr title="All segments, of all categories, removed and non-removed">
+            <td style="text-align: left;">Total Submissions:</td>
+            <td style="text-align: left;"></td>
+        </tr>
+        <tr title="Time saved across non-removed, skippable segments">
+            <td style="text-align: left;">Time Saved:</td>
+            <td style="text-align: left;"></td>
+        </tr>
+        <tr title="Number of skips on non-removed, skippable segments">
+            <td style="text-align: left;">Total Skips:</td>
+            <td style="text-align: left;"></td>
+        </tr>
+        <tr title="Number of segments which have been removed, either by user votes or by a VIP">
+            <td style="text-align: left;">Removed Segments:</td>
+            <td style="text-align: left;"></td>
+        </tr>
+    </table>
+    <table class="leaderboard">
+        <tr>
+            <th>Rank</th>
+            <th title="UserID is shown where the username is not set.">Username</th>
+            <th><a class="hiddenlink" title="Click to sort by submissions. Only counts non-removed segments." href="#" onclick="sortTable('submissions')">Submissions</a></th>
+            <th><a class="hiddenlink" title="Click to sort by skips. Skips only count if the segment is not removed." href="#" onclick="sortTable('skips')">Total Skips</a></th>
+            <th><a class="hiddenlink" title="Click to sort by time saved. Time Saved is the sum of views*duration across non-removed skippable segments." href="#" onclick="sortTable('saved')">Time Saved</a></th>
+            <th><a class="hiddenlink" title="Click to sort by net votes. Net Votes is the sum of upvotes and downvotes on segments submitted after September 2020." href="#" onclick="sortTable('votes')">Net Votes</a></th>
+        </tr>
 
-    <div class="outer">
-        <div class="header">
-            <div class="headerContent">
-                <div class="logo">
-                    <img id="logo" src="SponsorBlockIcon.png" />
-                </div>
-                <div class="headerText">
-                    <h1>Leaderboard</h1>
-                </div>
-            </div>
-        </div>
-        <div class="themeButton">
-            <button id="themeButton" title="Change theme" onclick="setThemeCookie();">Change theme</button>
-        </div>
-        <div class="datePicker">
-            <label for="datePicker">Select Date:</label>
-            <input type="date" id="datePicker" name="datePicker" onchange="populateLeaderboardFromDate(this.value)">
-        </div>
-        <div class="globalStatsSection">
-            <h2>Global Stats</h2>
-            <table class="globalStats">
-                <tr>
-                    <th></th>
-                    <th></th>
-                </tr>
-                <tr>
-                    <td><b>Contributing Users</b></td>
-                    <td>1,234</td>
-                </tr>
-                <tr>
-                    <td><b>Overall Submissions</b></td>
-                    <td>5,678,901</td>
-                </tr>
-                <tr>
-                    <td><b>Overall Time Saved</b></td>
-                    <td>12y 34d</td>
-                </tr>
-                <tr>
-                    <td><b>Overall Skips</b></td>
-                    <td>234,567,890</td>
-                </tr>
-                <tr>
-                    <td><b>Removed Submissions</b></td>
-                    <td>12,345</td>
-                </tr>
-            </table>
-        </div>
-        <div class="leaderboardSection">
-            <h2>Top Users</h2>
-            <table class="leaderboard">
-                <tr>
-                    <th>Rank</th>
-                    <th>Username</th>
-                    <th><a class="hiddenlink" title="Click to sort by submissions. Only counts non-removed segments." href="#" onclick="sortTable('submissions')">Submissions</a></th>
-                    <th><a class="hiddenlink" title="Click to sort by skips. Skips only count if the segment is not removed." href="#" onclick="sortTable('skips')">Total Skips</a></th>
-                    <th><a class="hiddenlink" title="Click to sort by time saved. Time Saved is the sum of views*duration across non-removed skippable segments." href="#" onclick="sortTable('saved')">Time Saved</a></th>
-                    <th><a class="hiddenlink" title="Click to sort by net votes. Net Votes is the sum of upvotes and downvotes on segments submitted after September 2020." href="#" onclick="sortTable('votes')">Net Votes</a></th>
-                </tr>
-                <!-- Table rows will be populated by JavaScript -->
-            </table>
-        </div>
+    </table>
+    <div class="attribution">
+        Leaderboard data was last updated {{last_updated}} UTC. This page uses SponsorBlock data licensed used under <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/">CC BY-NC-SA 4.0</a> from <a href="https://sponsor.ajay.app/">https://sponsor.ajay.app/</a>.
     </div>
 </body>
 </html>
