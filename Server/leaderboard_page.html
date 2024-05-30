@@ -137,7 +137,15 @@
                 const usernameCell = document.createElement('td');
                 const usernameLink = document.createElement('a');
                 usernameLink.href = `https://sb.ltn.fi/userid/${user.ID}`;
-                usernameLink.textContent = user.name;
+
+                if (user.name.length > 20 && !user.name.includes(" ")) { // good enough heuristic for long usernames which won't split over two lines
+                    let halfLength = Math.floor(user.name.length / 2);
+                    username = user.name.slice(0, halfLength) + "\u200B" + user.name.slice(halfLength); // zero-width space inserted halfway so it can span two lines
+                } else {
+                    username = user.name;
+                }
+
+                usernameLink.textContent = username;
                 usernameCell.appendChild(usernameLink);
                 row.appendChild(usernameCell);
 
