@@ -18,7 +18,6 @@ from time     import time
 from config   import data_path
 from datetime import datetime
 
-
 try:
 	sponsorTimes_path = argv[1]
 except IndexError:

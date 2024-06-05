@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-from config import archive_path
+from raspberrypi.config import archive_path
 from time import time
 from datetime import datetime, timedelta
 from contextlib import suppress

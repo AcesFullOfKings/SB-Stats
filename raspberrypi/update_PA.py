@@ -2,7 +2,7 @@ import os
 import requests
 
 from datetime   import datetime
-from my_secrets import PA_token, PA_username
+from raspberrypi.my_secrets import PA_token, PA_username
 
 def upload_file(source_path, destination_folder, filename):
     with open(source_path, "rb") as f:
