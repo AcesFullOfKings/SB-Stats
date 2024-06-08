@@ -33,9 +33,9 @@ def restart_webserver():
 file_list = ["leaderboard_page.html","leaderboard_page_beta.html", "leaderboard_server.py", "leaderboardStyleDark.css", "leaderboardStyleLight.css", "leaderboardStylePink.css"]
 server_path = "/home/AcesFullOfKings/server"
 
-#for filename in file_list:
-#    filepath = os.path.join("PythonAnywhere", filename)
-#    upload_file(filepath, server_path, filename)
+for filename in file_list:
+    filepath = os.path.join("PythonAnywhere", filename)
+    upload_file(filepath, server_path, filename)
 
 restart_webserver()
 
