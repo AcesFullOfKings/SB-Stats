@@ -1,4 +1,4 @@
-from bottle import route, template, default_app, request, static_file, request, error, HTTPResponse
+from bottle import route, template, default_app, request, static_file, request, error, HTTPResponse, response
 from datetime import datetime
 from config import data_path, home_folder, server_folder
 import os
@@ -54,8 +54,7 @@ def serve_leaderboard():
 @route("/global_stats.json")
 def serve_global_stats():
 	try:
-		with open("debug_log.txt", "a") as f:
-			file_date = request.headers["file-date"]
+		file_date = request.headers["file-date"]
 	except KeyError:
 		# no file date requested - send today's file
 		return static_file("global_stats.json", root=data_path)
