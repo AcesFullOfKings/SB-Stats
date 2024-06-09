@@ -12,3 +12,6 @@ leaderboard.csv
 download/**
 data/**
 .vs/
+**/config.py
+PythonAnywhere/data
+**/debug_log.txt
