@@ -177,6 +177,9 @@
 
         // Helper function to format time saved
         function formatTimeSaved(seconds) {
+            if (seconds < 60){
+                return `${seconds}s`
+            } 
             const intervals = [
                 { label: 'y', seconds: 31536000 }, // 1 year
                 { label: 'd', seconds: 86400 },    // 1 day
@@ -202,30 +205,6 @@
         // Function to sort the table by the specified column
         function sortTable(sortBy) {
             populateLeaderboard(sortBy);
-        }
-
-        // Helper function to format time saved
-        function formatTime(seconds) {
-            const intervals = [
-                { label: 'y', seconds: 31536000 }, // 1 year
-                { label: 'd', seconds: 86400 },    // 1 day
-                { label: 'h', seconds: 3600 },     // 1 hour
-                { label: 'm', seconds: 60 }        // 1 minute
-            ];
-
-            let remainingSeconds = seconds;
-            const result = [];
-
-            for (const interval of intervals) {
-                const intervalCount = Math.floor(remainingSeconds / interval.seconds);
-                if (intervalCount > 0) {
-                    result.push(`${intervalCount}${interval.label}`);
-                    remainingSeconds %= interval.seconds;
-                }
-                if (result.length === 2) break; // Get only the two most significant intervals
-            }
-
-            return result.join(' ');
         }
 
         function loadFuncs(){
