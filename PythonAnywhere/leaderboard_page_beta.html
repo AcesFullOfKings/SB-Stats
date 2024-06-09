@@ -66,25 +66,29 @@
             }
         }
 
-        function populateGlobalStats() {
+        function updateGlobalStats() {
             fetch('global_stats.json')
                 .then(response => response.json())
                 .then(data => {
-                    // Convert time saved from seconds to years and days
-                    const secondsInAYear = 60 * 60 * 24 * 365;
-                    const secondsInADay = 60 * 60 * 24;
-
-                    const years = Math.floor(data.overall_time_saved / secondsInAYear);
-                    const days = Math.floor((data.overall_time_saved % secondsInAYear) / secondsInADay);
-
-                    // Populate the table with data
-                    document.querySelector('table.globalStats tr:nth-child(2) td:nth-child(2)').textContent = data.contributing_users.toLocaleString();
-                    document.querySelector('table.globalStats tr:nth-child(3) td:nth-child(2)').textContent = data.overall_submissions.toLocaleString();
-                    document.querySelector('table.globalStats tr:nth-child(4) td:nth-child(2)').textContent = `${years}y ${days}d`;
-                    document.querySelector('table.globalStats tr:nth-child(5) td:nth-child(2)').textContent = data.overall_skips.toLocaleString();
-                    document.querySelector('table.globalStats tr:nth-child(6) td:nth-child(2)').textContent = data.removed_submissions.toLocaleString();
+                    populateGlobalStats(data)
                 })
                 .catch(error => console.error('Error fetching global stats:', error));
+        }
+
+        function populateGlobalStats(data) {
+            // Convert time saved from seconds to years and days
+            const secondsInAYear = 60 * 60 * 24 * 365;
+            const secondsInADay = 60 * 60 * 24;
+
+            const global_years = Math.floor(data.overall_time_saved / secondsInAYear);
+            const global_days = Math.floor((data.overall_time_saved % secondsInAYear) / secondsInADay);
+
+            // Populate the table with data
+            document.querySelector('td.global_users')      .textContent = data.contributing_users.toLocaleString();
+            document.querySelector('td.global_submissions').textContent = data.overall_submissions.toLocaleString();
+            document.querySelector('td.global_time')       .textContent = `${global_years}y ${global_days}d`;
+            document.querySelector('td.global_skips')      .textContent = data.overall_skips.toLocaleString();
+            document.querySelector('td.global_removed')    .textContent = data.removed_submissions.toLocaleString();
         }
 
         let leaderboardData = [];
@@ -228,62 +232,91 @@
             return result.join(' ');
         }
 
-    function populateLeaderboardFromDate(date) {
-        fetch('leaderboard.json', {
-            headers: {
-                'file-date': date,
-                'Cache-Control': 'no-cache'
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`No data found for ${date}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            leaderboardData = data;
-            updateLeaderboard('submissions');
-        })
-        .catch(error => {
-            console.error('Error fetching leaderboard data for date:', error);
-            alert(`No leaderboard data found for ${date}`);
-        });
-    }
+        function populateLeaderboardFromDate(date) {
+            // Add a timestamp to the URL to prevent caching
+            const url = `leaderboard.json?timestamp=${new Date().getTime()}`;
+            fetch(url, {
+                headers: {
+                    'file-date': date,
+                    'Cache-Control': 'no-cache'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`No data found for ${date}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                leaderboardData = data;
+                updateLeaderboard('submissions');
+            })
+            .catch(error => {
+                console.error('Error fetching leaderboard data for date:', error);
+                alert(`No leaderboard data found for ${date}`);
+            });
+        }
 
-    function populateGlobalStatsFromDate(date) {
-        fetch('Global Stats.json', {
-            headers: {
-                'file-date': date,
-                'Cache-Control': 'no-cache'
-            }
-        })
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`No data found for ${date}`);
-            }
-            return response.json();
-        })
-        .then(data => {
-            globalData = data;
-            updateLeaderboard('submissions');
-        })
-        .catch(error => {
-            console.error('Error fetching leaderboard data for date:', error);
-            alert(`No leaderboard data found for ${date}`);
-        });
-    }
+        function populateGlobalStatsFromDate(date) {
+            // Add a timestamp to the URL to prevent caching
+            const url = `global_stats.json?timestamp=${new Date().getTime()}`;
+            fetch(url, {
+                headers: {
+                    'file-date': date,
+                    'Cache-Control': 'no-cache'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`No Global data found for ${date}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                populateGlobalStats(data)
+            })
+            .catch(error => {
+                console.error('Error fetching Global data for date:', error);
+                alert(`No Global data found for ${date}`);
+            });
+        }
 
-    function updatePageDate(dataDate){
-        populateLeaderboardFromDate(dataDate);
-        populateGlobalStatsFromDate(dataDate);
-    }
+        function updatePageDate(dataDate){
+            populateLeaderboardFromDate(dataDate);
+            populateGlobalStatsFromDate(dataDate);
+        }
 
-    window.onload = function(){
-        setStyle();
-        populateGlobalStats();
-        populateLeaderboard();
-    }
+        async function fetchAvailableDates() {
+            try {
+                const response = await fetch('/available_dates.json');
+                if (!response.ok) {
+                    throw new Error('Failed to fetch available dates');
+                }
+                const dates = await response.json();
+                return dates;
+            } catch (error) {
+                console.error('Error fetching available dates:', error);
+                return [];
+            }
+        }
+
+        async function initialiseDatePicker() {
+            const availableDates = await fetchAvailableDates();
+            flatpickr("#datePicker", {
+                enable: availableDates.map(date => new Date(date)),
+                dateFormat: "Y-m-d",
+                onChange: function(selectedDates, dateStr, instance) {
+                    updatePageDate(dateStr);
+                }
+            });
+        }
+
+        window.onload = function(){
+            setStyle();
+            updateGlobalStats();
+            populateLeaderboard();
+            initialiseDatePicker()
+        }
 
     </script>
     <header>
@@ -295,31 +328,35 @@
     </header>
     <div class="datePicker">
         <label for="datePicker">Select Date:</label>
-        <input type="date" id="datePicker" name="datePicker" onchange="populateLeaderboardFromDate(this.value)">
+        <input type="text" id="datePicker" name="datePicker">
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    
     <table class="globalStats">
         <tr>
             <th colspan="2" style="text-align: center; width:160px">Global Stats</th>
         </tr>
         <tr title="Number of users with at least one non-removed segment">
             <td style="text-align: left;">Contributing Users:</td>
-            <td style="text-align: left;"></td>
+            <td class="global_users" style="text-align: left;"></td>
         </tr>
         <tr title="All segments, of all categories, removed and non-removed">
             <td style="text-align: left;">Total Submissions:</td>
-            <td style="text-align: left;"></td>
+            <td class="global_submissions" style="text-align: left;"></td>
         </tr>
         <tr title="Time saved across non-removed, skippable segments">
             <td style="text-align: left;">Time Saved:</td>
-            <td style="text-align: left;"></td>
+            <td class="global_time" style="text-align: left;"></td>
         </tr>
         <tr title="Number of skips on non-removed, skippable segments">
             <td style="text-align: left;">Total Skips:</td>
-            <td style="text-align: left;"></td>
+            <td class="global_skips" style="text-align: left;"></td>
         </tr>
         <tr title="Number of segments which have been removed, either by user votes or by a VIP">
             <td style="text-align: left;">Removed Segments:</td>
-            <td style="text-align: left;"></td>
+            <td class="global_removed" style="text-align: left;"></td>
         </tr>
     </table>
     <table class="leaderboard">

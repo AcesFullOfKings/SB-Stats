@@ -32,6 +32,10 @@ body {
     border-radius: 5px;
 }
 
+label{
+    color:white;
+}
+
 .globalStats {
     margin-bottom: 50px;
 }

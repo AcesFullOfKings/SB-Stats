@@ -30,7 +30,14 @@ def restart_webserver():
     else:
         print(f"Response was: {response.status_code}; message is: {response.text}")
 
-file_list = ["leaderboard_page.html","leaderboard_page_beta.html", "leaderboard_server.py", "leaderboardStyleDark.css", "leaderboardStyleLight.css", "leaderboardStylePink.css"]
+file_list = []
+file_list.append("leaderboard_page_beta.html")
+#file_list.append("leaderboard_page.html")
+#file_list.append("leaderboard_server.py")
+file_list.append("leaderboardStyleDark.css")
+#file_list.append("leaderboardStyleLight.css")
+#file_list.append("leaderboardStylePink.css")
+
 server_path = "/home/AcesFullOfKings/server"
 
 for filename in file_list:
