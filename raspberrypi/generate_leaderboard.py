@@ -28,7 +28,6 @@ try:
 except IndexError:
 	userNames_path = "download/userNames.csv"
 
-
 auto_upvotes_endtime = 1598989542
 start_time=time()
 
@@ -40,7 +39,6 @@ overall_time_saved  = 0
 overall_skips       = 0
 removed_submissions = 0
 
-
 # set up segs reader:
 sponsortimes = open(sponsorTimes_path, "r", encoding="utf-8")
 first_row = sponsortimes.readline() # discard this so it's not processed in the loop below
@@ -49,6 +47,9 @@ del first_row
 sponsortimes_field_names = ["videoID","startTime","endTime","votes","locked","incorrectVotes","UUID","userID","timeSubmitted","views","category","actionType","service","videoDuration","hidden","reputation","shadowHidden","hashedVideoID","userAgent","description"]
 segment_reader = csv.DictReader(sponsortimes, fieldnames=sponsortimes_field_names)
 
+# set up mini sponsorTimes writer:
+mini_writer = csv.writer("sponsorTimes_mini.csv")
+mini_writer.writerow(["UUID", "userID", "videoID", "startTime", "endTime", "category", "actionType", "votes", "hidden", "shadowHidden","timeSubmitted", "locked"])
 
 #set up users reader:
 usernames = open(userNames_path, "r", encoding="utf-8")
@@ -65,9 +66,10 @@ print("Processing sponsorTimes.csv..")
 
 contributing_users = set()
 active_users = 0
-ignored_votes = 0
+#ignored_votes = 0
 
 for segment in segment_reader:
+	# Stuff for stats:
 	votes         = int(segment["votes"])
 	hidden        = int(segment["hidden"])
 	shadowHidden  = int(segment["shadowHidden"])
@@ -78,6 +80,13 @@ for segment in segment_reader:
 	actionType    = segment["actionType"] # can be skip, mute, full, poi, or chapter
 	timeSubmitted = int(segment["timeSubmitted"])/1000 #the db encodes this in milliseconds, but I want it in seconds.
 
+	# Extra stuff to keep for mini file:
+	videoID  = segment["videoID"]
+	category = segment["category"]
+	UUID     = segment["UUID"]
+	locked   = segment["locked"]
+
+	mini_writer.writerow([UUID, userID, videoID, startTime, endTime, category, actionType, votes, hidden, shadowHidden,timeSubmitted, locked])
 	overall_submissions += 1
 
 	if userID not in users:
@@ -99,8 +108,8 @@ for segment in segment_reader:
 
 	if timeSubmitted > auto_upvotes_endtime:
 		users[userID]["total_votes"] += votes
-	else:
-		ignored_votes += 1
+	#else:
+	#	ignored_votes += 1
 
 	if votes <= -2 or shadowHidden or hidden:
 		removed_submissions += 1
