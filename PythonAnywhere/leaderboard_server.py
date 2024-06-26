@@ -12,7 +12,7 @@ def serve_favicon():
 def leaderboard():
 	page_path = os.path.join(server_folder, "leaderboard_page.html")
 
-	last_updated=int(get_last_updated())
+	last_updated = int(get_last_updated())
 	last_updated = datetime.fromtimestamp(last_updated).strftime("%d/%m/%y %H:%M")
 	return template(page_path, last_updated=last_updated)
 
@@ -20,7 +20,7 @@ def leaderboard():
 def leaderboard():
 	page_path = os.path.join(server_folder, "leaderboard_page_beta.html")
 
-	last_updated=int(get_last_updated())
+	last_updated = int(get_last_updated())
 	last_updated = datetime.fromtimestamp(last_updated).strftime("%d/%m/%y %H:%M")
 	return template(page_path, last_updated=last_updated)
 
@@ -69,7 +69,7 @@ def serve_global_stats():
 		return HTTPResponse(body="Not Found", status=404, headers=None)
 	
 def get_dates_from_filenames(directory, suffix):
-    """Helper function to extract dates from filenames in a given directory with a specific suffix."""
+    """Helper function to extract dates from filenames."""
     files = os.listdir(directory)
     dates = set()
     for file in files:
@@ -77,6 +77,23 @@ def get_dates_from_filenames(directory, suffix):
             date_str = file.split('_')[0]
             dates.add(date_str)
     return dates
+
+@route("/user_data.json")
+def serve_user_data():
+	try:
+		userID = request.query["userid"]
+	except KeyError:
+		# no file date requested - send today's file
+		return HTTPResponse(body="No userid provided.", status=400, headers=None)
+
+	user_data_location = os.path.join(data_path, "User Stats")
+	filename = userID + ".json"
+	filepath = os.path.join(user_data_location, filename)
+
+	if os.path.exists(filepath):
+		return static_file(filename, root=user_data_location)
+	else:
+		return HTTPResponse(body="Not Found", status=404, headers=None)
 
 @route("/available_dates.json")
 def serve_available_dates():
