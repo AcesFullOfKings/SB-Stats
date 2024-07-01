@@ -31,10 +31,10 @@ def restart_webserver():
         print(f"Response was: {response.status_code}; message is: {response.text}")
 
 file_list = []
-file_list.append("leaderboard_page_beta.html")
+#file_list.append("leaderboard_page_beta.html")
 #file_list.append("leaderboard_page.html")
 #file_list.append("leaderboard_server.py")
-file_list.append("leaderboardStyleDark.css")
+#file_list.append("leaderboardStyleDark.css")
 #file_list.append("leaderboardStyleLight.css")
 #file_list.append("leaderboardStylePink.css")
 

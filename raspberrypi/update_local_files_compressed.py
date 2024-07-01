@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-from raspberrypi.config import archive_path
+from config import archive_path
 from time import time
 from datetime import datetime, timedelta
 from contextlib import suppress
@@ -15,11 +15,13 @@ if force_update:
 
 today = datetime.now()
 
-compressed_segs_server_path = "https://sb.minibomba.pro/mirror/sponsorTimes.csv.zst"
+compressed_segs_server_path  = "https://sb.minibomba.pro/mirror/sponsorTimes.csv.zst"
 compressed_names_server_path = "https://sb.minibomba.pro/mirror/userNames.csv.zst"
+VIP_users_server_path        = "https://sb.minibomba.pro/mirror/vipUsers.csv"
 
-compressed_segs_local_path = f"download/sponsorTimes.csv.zst"
+compressed_segs_local_path  = f"download/sponsorTimes.csv.zst"
 compressed_names_local_path = f"download/userNames.csv.zst"
+VIP_users_local_path        = f"vipUsers.csv"
 
 with suppress(Exception):
 	os.remove("download/old_sponsorTimes.csv")
@@ -58,6 +60,9 @@ if proceed:
 
 	log("Curling names..")
 	os.system(f"curl {compressed_names_server_path} --output {compressed_names_local_path}")
+
+	log("Curling VIPs..")
+	os.system(f"curl {VIP_users_server_path} --output {VIP_users_local_path}")
 
 	log("Decompressing segs..")
 	# (requires brew install zstd)

@@ -11,6 +11,7 @@ usernames.csv:    userID,userName,locked
 import os
 import csv
 import json
+import base64
 import platform
 
 from sys      import argv
@@ -29,6 +30,7 @@ except IndexError:
 	userNames_path = "download/userNames.csv"
 
 auto_upvotes_endtime = 1598989542
+sponsorblock_epoch   = 1564088876 # the timestamp of the first submitted segment. All segs are after this time.
 start_time=time()
 
 # overall global stats:
@@ -47,9 +49,33 @@ del first_row
 sponsortimes_field_names = ["videoID","startTime","endTime","votes","locked","incorrectVotes","UUID","userID","timeSubmitted","views","category","actionType","service","videoDuration","hidden","reputation","shadowHidden","hashedVideoID","userAgent","description"]
 segment_reader = csv.DictReader(sponsortimes, fieldnames=sponsortimes_field_names)
 
+def hex_to_base64(hex_string):
+	try:
+		# SOME UUIDs contain a version number. Sometimes it's at the beginning, and sometimes at the end.
+		# The number makes the hex an odd-length. odd-length is invalid hex.
+		# Rather than try to remove it (difficult!), I just zero-pad and encode the zero and the version
+		# Thank you hmmm for the idea!
+		if len(hex_string)%2 != 0:
+			hex_string = "0" + hex_string
+
+		byte_data = hex_string.replace("-", "")
+		byte_data = bytes.fromhex(byte_data)
+		b64_data = base64.b64encode(byte_data).decode('ascii')
+		return b64_data.replace("=", "") # there is usually an = on the end, which is just padding. The b64 won't decode without it though, so append it to convert back to hex
+	except:
+		print(f"cannot convert hex: {hex_string}")
+		return hex_string
+
 # set up mini sponsorTimes writer:
-mini_writer = csv.writer("sponsorTimes_mini.csv")
-mini_writer.writerow(["UUID", "userID", "videoID", "startTime", "endTime", "category", "actionType", "votes", "hidden", "shadowHidden","timeSubmitted", "locked"])
+mini_file = open("sponsorTimes_mini.csv", "w")
+mini_writer = csv.writer(mini_file)
+mini_writer.writerow(["UUID", "userID", "videoID", "startTime", "endTime", "categoryType", "votes", "hiddenShadowHiddenLocked","timeSubmitted"])
+
+mini_categories = {"sponsor":"s", "selfpromo":"u", "intro":"i", "outro":"o", 
+				   "preview":"p", "interaction":"r", "poi_highlight":"h", 
+				   "exclusive_access":"e", "filler":"f", "chapter":"c",
+				   "music_offtopic":"n"}
+mini_types = {"full":"f", "skip":"s", "mute":"m", "poi":"p", "chapter":"c"}
 
 #set up users reader:
 usernames = open(userNames_path, "r", encoding="utf-8")
@@ -66,7 +92,6 @@ print("Processing sponsorTimes.csv..")
 
 contributing_users = set()
 active_users = 0
-#ignored_votes = 0
 
 for segment in segment_reader:
 	# Stuff for stats:
@@ -78,15 +103,28 @@ for segment in segment_reader:
 	views         = int(segment["views"])
 	userID        = segment["userID"]
 	actionType    = segment["actionType"] # can be skip, mute, full, poi, or chapter
-	timeSubmitted = int(segment["timeSubmitted"])/1000 #the db encodes this in milliseconds, but I want it in seconds.
+	timeSubmitted = int(int(segment["timeSubmitted"])/1000) #the db encodes this in milliseconds, but I want it in seconds.
 
 	# Extra stuff to keep for mini file:
 	videoID  = segment["videoID"]
 	category = segment["category"]
 	UUID     = segment["UUID"]
-	locked   = segment["locked"]
+	locked   = int(segment["locked"])
 
-	mini_writer.writerow([UUID, userID, videoID, startTime, endTime, category, actionType, votes, hidden, shadowHidden,timeSubmitted, locked])
+	mini_category = mini_categories.get(category, "?")
+	if mini_category == "?": print(f"unknown category on seg {UUID}: {category}")
+	mini_type = mini_types.get(actionType, "?")
+	if mini_type == "?": print(f"unknown actionType: {actionType}")
+	mini_starttime = round(startTime, 2)
+	mini_endtime = round(endTime, 2)
+	mini_UUID = hex_to_base64(UUID)
+	mini_userID = hex_to_base64(userID)
+
+	mini_HSL = 4*hidden + 2*shadowHidden + locked # packs the three bools into a single binary number 000-111 (saved as 0-7).
+
+	mini_timeSubmitted = timeSubmitted - sponsorblock_epoch # make all timestamps relative to the first segment. Saves digits!
+
+	mini_writer.writerow([mini_UUID, mini_userID, videoID, mini_starttime, mini_endtime, mini_category+mini_type, votes, mini_HSL, mini_timeSubmitted])
 	overall_submissions += 1
 
 	if userID not in users:
@@ -214,8 +252,8 @@ today_globalstats_filename = os.path.join(globalstats_history_folder, f"{today_s
 current_platform = platform.system()
 
 if current_platform != "Windows":
-	os.system(f"sudo cp leaderboard.json {today_leaderboard_filename}")
-	os.system(f"sudo cp global_stats.json {today_globalstats_filename}")
+	os.system(f'sudo cp leaderboard.json "{today_leaderboard_filename}"')
+	os.system(f'sudo cp global_stats.json "{today_globalstats_filename}"')
 else:
 	os.system(f"copy leaderboard.json {today_leaderboard_filename}")
 	os.system(f"copy global_stats.json {today_globalstats_filename}")
