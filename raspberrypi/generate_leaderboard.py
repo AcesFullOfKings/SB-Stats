@@ -11,13 +11,12 @@ usernames.csv:    userID,userName,locked
 import os
 import csv
 import json
-import base64
-import platform
 
-from sys      import argv
-from time     import time
-from config   import data_path
-from datetime import datetime
+from sys         import argv
+from time        import time
+from config      import data_path, leaderboard_archive_path, sponsorTimes_sql_archive_path, globalstats_archive_path
+from datetime    import datetime
+from postprocess import csv_to_sql
 
 try:
 	sponsorTimes_path = argv[1]
@@ -29,9 +28,19 @@ try:
 except IndexError:
 	userNames_path = "download/userNames.csv"
 
+sponsortimes_mini_path = "data/sponsorTimes_mini.csv"
+
+try:
+	os.remove(sponsortimes_mini_path)
+except FileNotFoundError:
+	pass
+
+with open("all_personabots.txt", "r") as f:
+	personabots = set(f.read().split("\n"))
+
 auto_upvotes_endtime = 1598989542
 sponsorblock_epoch   = 1564088876 # the timestamp of the first submitted segment. All segs are after this time.
-start_time=time()
+start_time = time()
 
 # overall global stats:
 overall_users       = 0
@@ -49,27 +58,10 @@ del first_row
 sponsortimes_field_names = ["videoID","startTime","endTime","votes","locked","incorrectVotes","UUID","userID","timeSubmitted","views","category","actionType","service","videoDuration","hidden","reputation","shadowHidden","hashedVideoID","userAgent","description"]
 segment_reader = csv.DictReader(sponsortimes, fieldnames=sponsortimes_field_names)
 
-def hex_to_base64(hex_string):
-	try:
-		# SOME UUIDs contain a version number. Sometimes it's at the beginning, and sometimes at the end.
-		# The number makes the hex an odd-length. odd-length is invalid hex.
-		# Rather than try to remove it (difficult!), I just zero-pad and encode the zero and the version
-		# Thank you hmmm for the idea!
-		if len(hex_string)%2 != 0:
-			hex_string = "0" + hex_string
-
-		byte_data = hex_string.replace("-", "")
-		byte_data = bytes.fromhex(byte_data)
-		b64_data = base64.b64encode(byte_data).decode('ascii')
-		return b64_data.replace("=", "") # there is usually an = on the end, which is just padding. The b64 won't decode without it though, so append it to convert back to hex
-	except:
-		print(f"cannot convert hex: {hex_string}")
-		return hex_string
-
 # set up mini sponsorTimes writer:
-mini_file = open("sponsorTimes_mini.csv", "w")
+mini_file = open(sponsortimes_mini_path, "w")
 mini_writer = csv.writer(mini_file)
-mini_writer.writerow(["UUID", "userID", "videoID", "startTime", "endTime", "categoryType", "votes", "hiddenShadowHiddenLocked","timeSubmitted"])
+mini_writer.writerow(["UUID", "userID", "videoID", "startTime", "endTime", "views", "categoryType", "votes", "hiddenShadowHiddenLocked","timeSubmitted"])
 
 mini_categories = {"sponsor":"s", "selfpromo":"u", "intro":"i", "outro":"o", 
 				   "preview":"p", "interaction":"r", "poi_highlight":"h", 
@@ -105,26 +97,39 @@ for segment in segment_reader:
 	actionType    = segment["actionType"] # can be skip, mute, full, poi, or chapter
 	timeSubmitted = int(int(segment["timeSubmitted"])/1000) #the db encodes this in milliseconds, but I want it in seconds.
 
-	# Extra stuff to keep for mini file:
-	videoID  = segment["videoID"]
-	category = segment["category"]
-	UUID     = segment["UUID"]
-	locked   = int(segment["locked"])
+	if userID not in personabots:
+		# Extra stuff to keep for mini file:
 
-	mini_category = mini_categories.get(category, "?")
-	if mini_category == "?": print(f"unknown category on seg {UUID}: {category}")
-	mini_type = mini_types.get(actionType, "?")
-	if mini_type == "?": print(f"unknown actionType: {actionType}")
-	mini_starttime = round(startTime, 2)
-	mini_endtime = round(endTime, 2)
-	mini_UUID = hex_to_base64(UUID)
-	mini_userID = hex_to_base64(userID)
+		UUID = segment["UUID"]
 
-	mini_HSL = 4*hidden + 2*shadowHidden + locked # packs the three bools into a single binary number 000-111 (saved as 0-7).
+		try:
+			mini_UUID = int(UUID.replace("-", ""), 16) # convert from base-16 str (hex) to an int
+			mini_userID = int(userID.replace("-", ""), 16)
+		except ValueError:
+			print("Ignoring bad hex in row: "+ str(segment))
 
-	mini_timeSubmitted = timeSubmitted - sponsorblock_epoch # make all timestamps relative to the first segment. Saves digits!
+		else: # runs if the try: block doesn't raise an exception
+			videoID  = segment["videoID"]
+			category = segment["category"] # sponsor, filler, selfpromo etc
+			
+			locked   = int(segment["locked"])
+			mini_starttime = round(startTime, 2)
+			mini_endtime = round(endTime, 2)
 
-	mini_writer.writerow([mini_UUID, mini_userID, videoID, mini_starttime, mini_endtime, mini_category+mini_type, votes, mini_HSL, mini_timeSubmitted])
+			mini_category = mini_categories.get(category, "?")
+			if mini_category == "?": print(f"unknown category on seg {UUID}: {category}")
+			mini_type = mini_types.get(actionType, "?")
+			if mini_type == "?": print(f"unknown actionType: {actionType}")
+
+			mini_HSL = 4*hidden + 2*shadowHidden + locked # packs the three bools into a single binary number 000-111 (saved as 0-7).
+			mini_timeSubmitted = timeSubmitted - sponsorblock_epoch # make all timestamps relative to the first segment. Saves digits!
+
+			mini_writer.writerow([mini_UUID, mini_userID, videoID, mini_starttime, mini_endtime, views, mini_category+mini_type, votes, mini_HSL, mini_timeSubmitted])
+
+	else:
+		pass
+		#print("Ignoring personabot in row: " + str(segment))
+
 	overall_submissions += 1
 
 	if userID not in users:
@@ -146,8 +151,6 @@ for segment in segment_reader:
 
 	if timeSubmitted > auto_upvotes_endtime:
 		users[userID]["total_votes"] += votes
-	#else:
-	#	ignored_votes += 1
 
 	if votes <= -2 or shadowHidden or hidden:
 		removed_submissions += 1
@@ -157,15 +160,15 @@ for segment in segment_reader:
 	if not line_num%1_000_000:
 		print(f"Processing line {line_num}")
 
+mini_file.close()
 sponsortimes.close() # finished with this file now
 end_time=time()
-
-contributing_users = len(contributing_users)
-active_users = len(users)
 
 print(f"Time taken: {round(end_time-start_time,1)}")
 print("Processing usernames.csv..")
 
+contributing_users = len(contributing_users)
+active_users = len(users)
 line_num=0
 
 for user_row in username_reader:
@@ -232,7 +235,7 @@ with open("leaderboard.json", "w") as f:
 global_stats = {
 	"contributing_users" : contributing_users,
 	"overall_submissions": overall_submissions ,
-	"overall_time_saved" : overall_time_saved,
+	"overall_time_saved" : int(overall_time_saved),
 	"overall_skips"      : overall_skips,
 	"removed_submissions": removed_submissions,
 	"active_users"       : active_users,
@@ -246,16 +249,32 @@ today_string = datetime.now().strftime("%Y-%m-%d")
 leaderboard_history_folder = os.path.join(data_path, "leaderboard")
 globalstats_history_folder = os.path.join(data_path, "Global Stats")
 
-today_leaderboard_filename = os.path.join(leaderboard_history_folder, f"{today_string}_leaderboard.json")
-today_globalstats_filename = os.path.join(globalstats_history_folder, f"{today_string}_global_stats.json")
+today_leaderboard_filepath = os.path.join(leaderboard_history_folder, f"{today_string}_leaderboard.json")
+today_globalstats_filepath = os.path.join(globalstats_history_folder, f"{today_string}_global_stats.json")
 
-current_platform = platform.system()
+try:
+	os.system(f'sudo cp leaderboard.json "{today_leaderboard_filepath}"') # save a copy locally just in case
+	os.system(f"sudo cp leaderboard.json {leaderboard_archive_path}/{today_string}_leaderboard.json")
+except OSError as ex:
+	print("Could not copy leaderboard to archive - " + str(ex))
 
-if current_platform != "Windows":
-	os.system(f'sudo cp leaderboard.json "{today_leaderboard_filename}"')
-	os.system(f'sudo cp global_stats.json "{today_globalstats_filename}"')
-else:
-	os.system(f"copy leaderboard.json {today_leaderboard_filename}")
-	os.system(f"copy global_stats.json {today_globalstats_filename}")
+try:
+	os.system(f'sudo cp global_stats.json "{today_globalstats_filepath}"')
+	os.system(f'sudo cp global_stats.json "{globalstats_archive_path}/{today_string}_global_stats.json"')
+except OSError as ex:
+	print("Could not copy global_stats to archive - " + str(ex))
+
+print("Converting mini.csv to sql..")
+sql_path = os.path.join(sponsorTimes_sql_archive_path, f"{today_string}_sponsorTimes_mini.sqlite3")
+
+try:
+	csv_to_sql(sponsortimes_mini_path, sql_path)
+except Exception as ex:
+	print("Failed to convert sponsorTimes_mini.csv to sql - " + str(ex))
+
+try:
+	os.remove(sponsortimes_mini_path) # delete sponsorTimes_mini.csv
+except OSError as ex:
+	print("Could not remove local sponsorTimes_mini.sqlite3 - " + str(ex))
 
 print("Done!")

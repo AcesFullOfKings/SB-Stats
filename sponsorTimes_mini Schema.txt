@@ -1,0 +1,85 @@
+Schema for sponsorTimes_mini.sqlite3
+
+This file is a minimised version of the SponsorBlock database with redundant information removed to 
+reduce file size while retaining all necessary data. Below is a detailed schema to guide the 
+transformation from the original format to the minimised format and back.
+
+Columns: UUID, userID, videoID, startTime, endTime, views, categoryType,
+         votes, hiddenShadowHiddenLocked, timeSubmitted
+
+Column Transformations:
+
+    UUID:
+        Original: 64-character hex string (sometimes with a version number prepended or appended)
+        Transformation: Stored as an integer
+        Example:
+            Original: 2a83fc5211ed2cbfc61fc285dfbbfe0933bed3eb3c0a8def3136948aa6c719717
+            Integer: 307685408938656825595632700340736741251899595497146564763861198280131536328471
+
+    userID:
+        Original: 64-character hex string
+        Transformation: Stored as an integer
+        Example:
+            Original: 6b1c73ae7b1e60aef2d73c5de8f3ee06d220f836e0f8c5daa9255f8c2b4a2c9b
+            Base64: 48447744921049807839855728797842431703581178953834364693892265314167030426779
+
+    videoID:
+        11-character string - Unchanged
+
+    startTime:
+        Original: Floating-point number
+        Transformation: Rounded to 2 decimal places; trailing zeros removed.
+        Example: 123.4567 becomes 123.46
+
+    endTime:
+        Original: Floating-point number
+        Transformation: Rounded to 2 decimal places; trailing zeros removed.
+        Example: 123.4500 becomes 123.45
+
+    views:
+        Original: Integer, unchanged
+        Example: 123
+
+    categoryType:
+        This is a two-character string with a single character for the category, and a single character for the segment type.
+        
+		Categories:
+            "sponsor"          -> "s"
+            "selfpromo"        -> "u"
+            "intro"            -> "i"
+            "outro"            -> "o"
+            "preview"          -> "p"
+            "interaction"      -> "r"
+            "poi_highlight"    -> "h"
+            "exclusive_access" -> "e"
+            "filler"           -> "f"
+            "chapter"          -> "c"
+            "music_offtopic"   -> "n"
+		
+		Types:
+			"full"    -> "f"
+			"skip"    -> "s", 
+			"mute"    -> "m", 
+			"poi"     -> "p", 
+			"chapter" -> "c"
+
+		Example:
+			"os" = outro + skip
+			"sm" = sponsor + mute
+
+    votes:
+        Original: Integer, unchanged
+		Example: 10
+
+    hiddenShadowHiddenLocked:
+        Original: Three boolean values in separate columns (hidden; shadowHidden; locked)
+        Transformation: Packed into a three-bit binary number and stored as an integer between 0-7.
+        Example:
+            hidden = 1, shadowHidden = 0, locked = 1 -> 101 in binary -> 5 in decimal.
+
+    timeSubmitted:
+        Original: Unix timestamp.
+        Transformation: Subtract the SponsorBlock Epoch (1564088876) from the timestamp.
+        Example:
+            Original: 1564098876
+            Stored as (1564098876 - 1564088876) = 10000

@@ -1,7 +1,7 @@
 import os
 import subprocess
 
-from config import archive_path
+from config import sponsorTimes_archive_path, userNames_archive_path
 from time import time
 from datetime import datetime, timedelta
 from contextlib import suppress
@@ -21,7 +21,7 @@ VIP_users_server_path        = "https://sb.minibomba.pro/mirror/vipUsers.csv"
 
 compressed_segs_local_path  = f"download/sponsorTimes.csv.zst"
 compressed_names_local_path = f"download/userNames.csv.zst"
-VIP_users_local_path        = f"vipUsers.csv"
+VIP_users_local_path        = f"download/vipUsers.csv"
 
 with suppress(Exception):
 	os.remove("download/old_sponsorTimes.csv")
@@ -90,8 +90,8 @@ if proceed:
 		log("Copying today's database to the archive..")
 		today_string = today.strftime("%Y-%m-%d")
 		try:
-			os.system(f"sudo cp download/{segs_filename_uncompressed} {archive_path}/{today_string}_{segs_filename_uncompressed}")
-			os.system(f"sudo cp download/{names_filename_uncompressed} {archive_path}/{today_string}_{names_filename_uncompressed}")
+			os.system(f"sudo cp download/{segs_filename_uncompressed} {sponsorTimes_archive_path}/{today_string}_{segs_filename_uncompressed}")
+			os.system(f"sudo cp download/{names_filename_uncompressed} {userNames_archive_path}/{today_string}_{names_filename_uncompressed}")
 		except OSError as ex:
 			log("Could not copy files to archive - " + str(ex))
 	else:
@@ -105,7 +105,6 @@ if proceed:
 		#this exception should cause the result value to be nonzero, stopping the rest of the daily_task process.
 		log("New file is not bigger than old file. Aborting. Archive skipped.")
 		raise RuntimeError
-
 else:
 	log(f"Did not download the remote database because it's not newer than the local file. local_last_modified is {local_last_modified}; server_last_modified is {server_last_modified}.")
 	raise RuntimeError

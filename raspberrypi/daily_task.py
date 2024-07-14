@@ -40,6 +40,6 @@ if __name__ == "__main__":
 		else:
 			log("Failed when running generate_leaderboard.py")
 	else:
-		log("Failed when running updateLocalFiles.py")
+		log("Failed when running update_local_files_compressed.py.py")
 
 	log(f"Total time taken for daily_task.py: {round(time()-start_time,1)}s")

@@ -32,7 +32,7 @@ server_data_path = "/home/AcesFullOfKings/server/data"
 upload_file(leaderboard_local_path, server_data_path, "leaderboard.json")
 upload_file(globalstats_local_path, server_data_path, "global_stats.json")
 upload_file(lastupdate_local_path, server_data_path, "last_db_update.txt")
-upload_file("vipUsers.csv", server_data_path, "vipUsers.csv")
+upload_file("download/vipUsers.csv", server_data_path, "vipUsers.csv")
 
 upload_file(leaderboard_local_path, f"{server_data_path}/Leaderboard/", f"{today_string}_leaderboard.json")
 upload_file(globalstats_local_path, f"{server_data_path}/Global Stats/", f"{today_string}_global_stats.json")

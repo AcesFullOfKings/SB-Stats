@@ -1,0 +1,90 @@
+{
+	"2024-07-01": {
+		"submissions": {
+			"filler": {
+				"mute": 1,
+				"skip": 3
+			},
+			"intro": {
+				"mute": 1,
+				"skip": 3
+			},
+			"outro": {
+				"mute": 1,
+				"skip": 3
+			},
+			"sponsor": {
+				"mute": 1,
+				"skip": 3,
+				"full": 2
+			},
+			"selfpromo": {
+				"mute": 1,
+				"skip": 3,
+				"full": 2
+			},
+			"preview": {
+				"mute": 1,
+				"skip": 3
+			},
+			"interaction": {
+				"mute": 1,
+				"skip": 3
+			},
+			"nonmusic": {
+				"skip": 3
+			},
+			"poi_highlight": 6,
+			"chapter": 8,
+			"exclusive_access": 9
+		},
+		"time saved": {
+			"sponsor": 1231,
+			"filler": 1231,
+			"intro": 12341,
+			"outro": 123451,
+			"selfpromo": 1234561,
+			"preview": 12345671,
+			"interaction": 123456781,
+			"nonmusic": 223456789
+		},
+		"views": {
+			"filler": {
+				"mute": 1,
+				"skip": 3
+			},
+			"intro": {
+				"mute": 1,
+				"skip": 3
+			},
+			"outro": {
+				"mute": 1,
+				"skip": 3
+			},
+			"sponsor": {
+				"mute": 1,
+				"skip": 3,
+				"full": 2
+			},
+			"selfpromo": {
+				"mute": 1,
+				"skip": 3,
+				"full": 2
+			},
+			"preview": {
+				"mute": 1,
+				"skip": 3
+			},
+			"interaction": {
+				"mute": 1,
+				"skip": 3
+			},
+			"nonmusic": {
+				"skip": 3
+			},
+			"poi_highlight": 6,
+			"chapter": 8,
+			"exclusive_access": 9
+		}
+	}
+}
