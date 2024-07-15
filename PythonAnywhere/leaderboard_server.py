@@ -65,7 +65,7 @@ def serve_leaderboard():
 			leaderboard = json.load(f)
 
 		for user in leaderboard:
-			user['vip'] = user['ID'] in VIPs
+			user["vip"] = user["ID"] in VIPs
 
 		response.content_type = 'application/json'
 		return json.dumps(leaderboard)

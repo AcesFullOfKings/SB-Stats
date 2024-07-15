@@ -149,9 +149,10 @@
                 usernameCell.appendChild(usernameLink);
 
                 if (user.vip) {
-                    const crownEmoji = document.createElement('span');
-                    crownEmoji.textContent = ' 👑';
-                    usernameCell.appendChild(crownEmoji);
+                    const vipEmoji = document.createElement('span');
+                    vipEmoji.textContent = ' ⭐';
+                    vipEmoji.title = 'This user is a VIP.';
+                    usernameCell.appendChild(vipEmoji);
                 }
 
                 row.appendChild(usernameCell);
