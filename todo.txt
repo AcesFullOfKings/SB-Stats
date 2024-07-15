@@ -1,4 +1,5 @@
-* Update website front end with a date picker for historic leaderboards/stats
+✅ Update website front end with a date picker for historic leaderboards/stats
+* Add "clear" button to date picker so that today's data can be viewed without reloading the page. Or just hardcode today's date to use today's file?
 * Sankey Diagram for global stats
 * Create a user page with per-user stats, graphs over time etc
 * Show an icon for VIP users on the leaderboard

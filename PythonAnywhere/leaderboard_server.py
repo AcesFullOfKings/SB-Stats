@@ -3,10 +3,11 @@ import json
 import random
 import sqlite3
 
-from time import sleep
-from bottle import route, template, default_app, request, static_file, request, error, HTTPResponse, response
-from config import data_path, home_folder, server_folder, auth_token
-from datetime import datetime
+from time       import sleep
+from bottle     import route, template, default_app, request, static_file, request, error, HTTPResponse, response
+from config     import data_path, home_folder, server_folder, auth_token
+from datetime   import datetime
+from contextlib import suppress
 
 conn = sqlite3.connect("/home/AcesFullOfKings/server/userdata.sqlite3")
 cursor = conn.cursor()
@@ -15,6 +16,12 @@ conn.execute("Create table if not exists userdata(userID,date,data)")
 
 # Create an index on the userID column
 cursor.execute("CREATE INDEX IF NOT EXISTS idx_userID ON userdata(userID);")
+
+VIPs_filepath = os.path.join(data_path, "vipUsers.csv")
+with open(VIPs_filepath, "r") as f:
+	VIPs = set(f.read().split("\n"))
+	with suppress(KeyError):
+		VIPs.remove("userID")
 
 @route("/favicon.ico")
 def serve_favicon():
@@ -52,7 +59,17 @@ def serve_leaderboard():
 		file_date = request.headers["file-date"]
 	except KeyError:
 		# no file date requested - send today's file
-		return static_file("leaderboard.json", root=data_path)
+		#return static_file("leaderboard.json", root=data_path)
+		leaderboard_path = os.path.join(data_path, "leaderboard.json")
+		with open(leaderboard_path, "r") as f:
+			leaderboard = json.load(f)
+
+		for user in leaderboard:
+			user['vip'] = user['ID'] in VIPs
+
+		response.content_type = 'application/json'
+		return json.dumps(leaderboard)
+
 
 	filename = file_date + "_leaderboard.json"
 	leaderboard_location = os.path.join(data_path, "Leaderboard")

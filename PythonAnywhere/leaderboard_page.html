@@ -147,6 +147,13 @@
 
                 usernameLink.textContent = username;
                 usernameCell.appendChild(usernameLink);
+
+                if (user.vip) {
+                    const crownEmoji = document.createElement('span');
+                    crownEmoji.textContent = ' 👑';
+                    usernameCell.appendChild(crownEmoji);
+                }
+
                 row.appendChild(usernameCell);
 
                 // Submissions
@@ -179,7 +186,7 @@
         function formatTimeSaved(seconds) {
             if (seconds < 60){
                 return `${seconds}s`
-            } 
+            }
             const intervals = [
                 { label: 'y', seconds: 31536000 }, // 1 year
                 { label: 'd', seconds: 86400 },    // 1 day

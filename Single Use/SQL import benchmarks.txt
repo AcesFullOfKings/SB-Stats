@@ -1,0 +1,17 @@
+Importing csv from the nas to create a db on the pi (with no index)
+
+~ 1m30s
+
+Importing csv from the nas to create a db on the nas (with no index)
+
+~ 9m40s
+
+Copying the db (~2.8GB) from the pi to the nas:
+
+~ 45s
+
+Importing csv from the nas to create a db on the pi (with userID indexed) and then copy the result to the nas:
+
+import: 21m9s
+copy: 1m14s
+size with index: 3.6GB (up from ~2.8)
