@@ -37,6 +37,11 @@ if __name__ == "__main__":
 			log("Updating PythonAnywhere..")
 			r3 = os.system("python update_PA.py")
 			log(f"update_PA result was {r3}")
+			
+			if r3 == 0:
+				log("Uploading user data..")
+				r4 = os.system("python upload_user_data.py")
+				log(f"upload_user_data result was {r4}")
 		else:
 			log("Failed when running generate_leaderboard.py")
 	else:

@@ -17,6 +17,7 @@ import sqlite3
 import subprocess
 
 from time import localtime
+from config import my_auth_token
 	
 def log(log_text):
 	"""
@@ -84,7 +85,6 @@ def csv_to_sql(csv_path, sql_path):
 
 		try:
 			subprocess.run(import_command, shell=True, check=True)
-			log("Import complete.")
 		except subprocess.CalledProcessError as e:
 			log(f"An error occurred during import: {e}")
 

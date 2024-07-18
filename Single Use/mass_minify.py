@@ -104,7 +104,12 @@ def minify_sponsorTimes(filename, mini_filepath):
 	mini_file.close()
 	
 
-for sponsorTimes_filename in os.listdir(archive_folder):
+all_files = os.listdir(archive_folder)
+num_files = len(all_files)
+num_completed = len(os.listdir(done_folder))
+completed_files = 0
+
+for sponsorTimes_filename in all_files:
 	if sponsorTimes_filename.endswith("sponsorTimes.csv"):
 		try:
 			sql_filepath = os.path.join(sponsorTimes_sql_archive_path, sponsorTimes_filename.replace(".csv", "_mini.sqlite3"))
@@ -113,10 +118,6 @@ for sponsorTimes_filename in os.listdir(archive_folder):
 				minify_sponsorTimes(sponsorTimes_filename, "sponsorTimes_mini.csv")
 				csv_to_sql("sponsorTimes_mini.csv", sql_filepath)
 
-				source = os.path.join(archive_folder, sponsorTimes_filename)
-				dest = os.path.join(done_folder, sponsorTimes_filename)
-
-				os.rename(source, dest) # move minified file to _converted folder
 				file_end_time = time()
 				secs = file_end_time - file_start_time
 				mins = int(secs//60)
@@ -124,6 +125,13 @@ for sponsorTimes_filename in os.listdir(archive_folder):
 				log(f"Time taken: {mins}m {secs}s")
 			else:
 				log(f"Skipping existing mini file for {sponsorTimes_filename}..")
+
+			source = os.path.join(archive_folder, sponsorTimes_filename)
+			dest = os.path.join(done_folder, sponsorTimes_filename)
+
+			os.rename(source, dest) # move minified file to _converted folder
+			completed_files += 1
+			log(f"Progress: {completed_files+num_completed}/{num_files+num_completed} ({round(100*(completed_files+num_completed)/(num_files+num_completed),1)}%)")
 		except Exception as ex:
 			log(f"Exception in {sponsorTimes_filename}: {ex}")
 		finally:
