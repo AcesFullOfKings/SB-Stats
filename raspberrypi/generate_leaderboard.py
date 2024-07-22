@@ -111,20 +111,24 @@ for segment in segment_reader:
 		else: # runs if the try: block doesn't raise an exception
 			videoID  = segment["videoID"]
 			category = segment["category"] # sponsor, filler, selfpromo etc
-			
-			locked   = int(segment["locked"])
-			mini_starttime = round(startTime, 2)
-			mini_endtime = round(endTime, 2)
 
 			mini_category = mini_categories.get(category, "?")
-			if mini_category == "?": print(f"unknown category on seg {UUID}: {category}")
-			mini_type = mini_types.get(actionType, "?")
-			if mini_type == "?": print(f"unknown actionType: {actionType}")
+			if mini_category == "?": 
+				print(f"unknown category on seg {UUID}: {category}")
+			else:
+				mini_type = mini_types.get(actionType, "?")
+				if mini_type == "?": 
+					print(f"unknown actionType: {actionType}")
+				else:
+					categoryType = mini_category + mini_type
+					locked   = int(segment["locked"])
+					mini_starttime = round(startTime, 2)
+					mini_endtime = round(endTime, 2)
 
-			mini_HSL = 4*hidden + 2*shadowHidden + locked # packs the three bools into a single binary number 000-111 (saved as 0-7).
-			mini_timeSubmitted = timeSubmitted - sponsorblock_epoch # make all timestamps relative to the first segment. Saves digits!
+					mini_HSL = 4*hidden + 2*shadowHidden + locked # packs the three bools into a single binary number 000-111 (saved as 0-7).
+					mini_timeSubmitted = timeSubmitted - sponsorblock_epoch # make all timestamps relative to the first segment. Saves digits!
 
-			mini_writer.writerow([mini_UUID, mini_userID, videoID, mini_starttime, mini_endtime, views, mini_category+mini_type, votes, mini_HSL, mini_timeSubmitted])
+					mini_writer.writerow([mini_UUID, mini_userID, videoID, mini_starttime, mini_endtime, views, categoryType, votes, mini_HSL, mini_timeSubmitted])
 
 	else:
 		pass
@@ -176,7 +180,7 @@ for user_row in username_reader:
 	user_name = user_row["userName"]
 	#locked    = user_row["locked"]
 
-	if userID != user_name and userID in users:
+	if userID != user_name and userID in users and user_name != "":
 		users[userID]["username"] = user_name
 	
 	line_num += 1
