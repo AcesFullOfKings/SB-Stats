@@ -6,17 +6,13 @@ from discord import app_commands
 from discord.ext import commands
 from credentials import oAuth_token
 
-# Intents setup
 intents = discord.Intents.default()
 intents.reactions = True
-#intents.messages = True  # Required for reaction monitoring
 no_mentions=discord.AllowedMentions.none()
 
-# Bot setup
 bot = commands.Bot(command_prefix="/", intents=intents)
 tree = bot.tree
 
-# Database setup
 conn = sqlite3.connect("SBCoin_ledger.db")
 cursor = conn.cursor()
 cursor.execute('''
@@ -29,9 +25,7 @@ CREATE TABLE IF NOT EXISTS transactions (
 	UNIQUE(awarder_id, receiver_id, message_id)
 )
 ''')
-cursor.execute('''
-CREATE INDEX IF NOT EXISTS idx_receiver_id ON transactions (receiver_id)
-''')
+
 conn.commit()
 
 @bot.event
@@ -100,6 +94,16 @@ async def balance(interaction: discord.Interaction, amount:int, hide:bool=False)
 	if amount <= 0:
 		await interaction.response.send_message("The amount must be a positive integer.", ephemeral=True)
 		return
+	
+	cursor.execute(
+			'''SELECT SUM(amount) FROM transactions WHERE receiver_id = ?''', (interaction.user.id,)
+	)
+
+	user_balance = cursor.fetchone()[0] or 0
+	if amount > user_balance:
+		await interaction.response.send_message(f"You don't have enough SBCoin to gamble {amount}; you only have {user_balance}", ephemeral=True)
+		return
+	
 	if random.random() > 0.49:
 		cursor.execute(
 			'''INSERT INTO transactions (awarder_id, receiver_id, message_id, amount)
@@ -108,14 +112,10 @@ async def balance(interaction: discord.Interaction, amount:int, hide:bool=False)
 		)
 
 		conn.commit()
-
-		# Check new balance
-		cursor.execute(
-			'''SELECT SUM(amount) FROM transactions WHERE receiver_id = ?''', (interaction.user.id,)
-		)
-		new_balance = cursor.fetchone()[0] or 0
+		
+		new_balance = user_balance - amount
 		await interaction.response.send_message(f"You gambled {amount} and lost! :( Now you only have {new_balance} SBCoin", ephemeral=hide)
-		print(f"{interaction.user} gambled {amount} and lost. Their new balance is {new_balance}")
+		print(f"{interaction.user} gambled {amount} and lost. Their new balance is {user_balance-amount}")
 	else:
 		cursor.execute(
 			'''INSERT INTO transactions (awarder_id, receiver_id, message_id, amount)
@@ -125,11 +125,7 @@ async def balance(interaction: discord.Interaction, amount:int, hide:bool=False)
 
 		conn.commit()
 
-		# Check new balance
-		cursor.execute(
-			'''SELECT SUM(amount) FROM transactions WHERE receiver_id = ?''', (interaction.user.id,)
-		)
-		new_balance = cursor.fetchone()[0] or 0
+		new_balance = user_balance + amount
 		await interaction.response.send_message(f"You gambled {amount} and won! :D Now you have {new_balance} SBCoin.", ephemeral=hide)
 		print(f"{interaction.user} gambled {amount} and won! Their new balance is {new_balance}")
 
