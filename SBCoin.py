@@ -2,6 +2,7 @@ import discord
 import sqlite3
 import random
 
+from time import localtime, time
 from discord import app_commands
 from discord.ext import commands
 from credentials import oAuth_token
@@ -28,32 +29,50 @@ CREATE TABLE IF NOT EXISTS transactions (
 
 conn.commit()
 
+def log(log_text):
+	"""
+	Takes a string, s, and logs it to a log file on disk with a timestamp. Also prints the string to console.
+	"""
+	current_time = localtime()
+	# year   = str(current_time.tm_year)
+	month  = str(current_time.tm_mon ).zfill(2)
+	day    = str(current_time.tm_mday).zfill(2)
+	hour   = str(current_time.tm_hour).zfill(2)
+	minute = str(current_time.tm_min ).zfill(2)
+	second = str(current_time.tm_sec ).zfill(2)
+
+	log_time = f"{day}/{month} {hour}:{minute}:{second}"
+	log_text = log_text.replace("\n", "").replace("\r", "") # makes sure each log line is only one line
+
+	print(f"{hour}:{minute} - {log_text}")
+	with open("log.txt", "a", encoding="utf-8") as f:
+		f.write(log_time + " - " + log_text + "\n")
+
 @bot.event
 async def on_ready():
-	print(f"Logged in as {bot.user}!")
+	log(f"Logged in as {bot.user}!")
 	await tree.sync()
 
 @bot.event
 async def on_raw_reaction_add(payload):
 	"""Handles reactions on messages, including historic messages not in cache."""
 	# Ensure it's the SBCoin emoji
-	if payload.emoji.is_custom_emoji() and payload.emoji.id in [1032063250478661672, 1323256554677600329]:  # Replace with your emoji name
+	if payload.emoji.is_custom_emoji() and payload.emoji.id in [1032063250478661672, 1323256554677600329]:
 		try:
-			# Fetch the channel and message
 			channel = bot.get_channel(payload.channel_id)
 			if channel is None:
-				print(f"Channel {payload.channel_id} not found.")
+				log(f"Channel {payload.channel_id} not found.")
 				return
 
 			message = await channel.fetch_message(payload.message_id)
 			user = await bot.fetch_user(payload.user_id)  # Use fetch_user instead of get_user
 			if user is None:
-				print(f"User {payload.user_id} not found even after fetching.")
+				log(f"User {payload.user_id} not found even after fetching.")
 				return
 
 			# Ignore if the user reacted to their own message
 			if message.author.id == user.id:
-				print(f"Ignoring own reaction from {user} ;)")
+				log(f"Ignoring own reaction from {user} ;)")
 				return
 
 			# Record the SBCoin transaction
@@ -65,11 +84,11 @@ async def on_raw_reaction_add(payload):
 				)
 				conn.commit()
 				if cursor.rowcount > 0:
-					print(f"SBCoin awarded: {user} -> {message.author}")
+					log(f"SBCoin awarded: {user} -> {message.author}")
 			except Exception as e:
-				print(f"Error tracking SBCoin reaction: {e}")
+				log(f"Error tracking SBCoin reaction: {e}")
 		except Exception as e:
-			print(f"Error processing raw reaction: {e}")
+			log(f"Error processing raw reaction: {e}")
 
 @bot.tree.command(name="balance", description="Checks a user's SBCoin balance.")
 @app_commands.describe(user="The user whose balance to check.")
@@ -85,16 +104,25 @@ async def balance(interaction: discord.Interaction, user: discord.User = None, h
 	balance = cursor.fetchone()[0]
 	if balance is None or balance == 0:
 		balance = "no"
-	await interaction.response.send_message(f"{user.mention} has {balance} SBCoin.",allowed_mentions=no_mentions, ephemeral=hide)
+	await interaction.response.send_message(f"{user.mention} has {balance} SBCoin.", allowed_mentions=no_mentions, ephemeral=hide)
+
+cooldowns = dict()
 
 @bot.tree.command(name="gamble", description="Gamble your fortunes away.")
 @app_commands.describe(amount="The amount to gamble.")
 @app_commands.describe(hide="Only you can see the response.")
 async def balance(interaction: discord.Interaction, amount:int, hide:bool=False):
+	if not hide:
+		if cooldowns.get(interaction.user.id, 0) >= time()-60:
+			log(f"{interaction.user} tried to gamble {amount}, but is on cooldown.")
+		else:
+			cooldowns[interaction.user.id] = int(time())
+
 	if amount <= 0:
 		await interaction.response.send_message("The amount must be a positive integer.", ephemeral=True)
+		log(f"{interaction.user} tried to gamble {amount}, but it failed because that's not a positive int.")
 		return
-	
+
 	cursor.execute(
 			'''SELECT SUM(amount) FROM transactions WHERE receiver_id = ?''', (interaction.user.id,)
 	)
@@ -102,8 +130,9 @@ async def balance(interaction: discord.Interaction, amount:int, hide:bool=False)
 	user_balance = cursor.fetchone()[0] or 0
 	if amount > user_balance:
 		await interaction.response.send_message(f"You don't have enough SBCoin to gamble {amount}; you only have {user_balance}", ephemeral=True)
+		log(f"{interaction.user} tried to gamble {amount}, but it failed because they only have {user_balance}.")
 		return
-	
+
 	if random.random() > 0.49:
 		cursor.execute(
 			'''INSERT INTO transactions (awarder_id, receiver_id, message_id, amount)
@@ -112,10 +141,10 @@ async def balance(interaction: discord.Interaction, amount:int, hide:bool=False)
 		)
 
 		conn.commit()
-		
+
 		new_balance = user_balance - amount
-		await interaction.response.send_message(f"You gambled {amount} and lost! :( Now you only have {new_balance} SBCoin", ephemeral=hide)
-		print(f"{interaction.user} gambled {amount} and lost. Their new balance is {user_balance-amount}")
+		await interaction.response.send_message(f"You gambled {amount} SBCoin and lost! :( Now you only have {new_balance} SBCoin", ephemeral=hide)
+		log(f"{interaction.user} gambled {amount} and lost. Their new balance is {new_balance}")
 	else:
 		cursor.execute(
 			'''INSERT INTO transactions (awarder_id, receiver_id, message_id, amount)
@@ -126,8 +155,8 @@ async def balance(interaction: discord.Interaction, amount:int, hide:bool=False)
 		conn.commit()
 
 		new_balance = user_balance + amount
-		await interaction.response.send_message(f"You gambled {amount} and won! :D Now you have {new_balance} SBCoin.", ephemeral=hide)
-		print(f"{interaction.user} gambled {amount} and won! Their new balance is {new_balance}")
+		await interaction.response.send_message(f"You gambled {amount} SBCoin and won! :D Now you have {new_balance} SBCoin.", ephemeral=hide)
+		log(f"{interaction.user} gambled {amount} and won! Their new balance is {new_balance}")
 
 @bot.tree.command(name="send", description="Send your hoarded treasures to someone else.")
 @app_commands.describe(recipient="The user to send your coin to.")
@@ -149,7 +178,7 @@ async def send(interaction: discord.Interaction, recipient: discord.User, amount
 	sender_balance = cursor.fetchone()[0] or 0
 
 	if sender_balance < amount:
-		await interaction.response.send_message(f"You do not have enough SBCoin to send {amount}. You currently have {sender_balance}.",allowed_mentions=no_mentions, ephemeral=True)
+		await interaction.response.send_message(f"You do not have enough SBCoin to send {amount}. You currently have {sender_balance}.", allowed_mentions=no_mentions, ephemeral=True)
 		return
 
 	# Record the transaction
@@ -173,6 +202,6 @@ async def send(interaction: discord.Interaction, recipient: discord.User, amount
 		await interaction.response.send_message(f"{interaction.user.mention} sent {amount} SBCoin to {recipient.mention}. {interaction.user.mention} now has {sender_balance-amount} and {recipient.mention} now has {recipient_balance}.",allowed_mentions=no_mentions)
 	except Exception as e:
 		await interaction.response.send_message("An error occurred while processing the transaction.")
-		print(f"Error processing send command: {e}")
+		log(f"Error processing send command: {e}")
 
 bot.run(oAuth_token)
