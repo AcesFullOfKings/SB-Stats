@@ -2,6 +2,7 @@ import discord
 import sqlite3
 import random
 
+from asyncio import sleep
 from time import localtime, time
 from discord import app_commands
 from discord.ext import commands
@@ -11,7 +12,7 @@ intents = discord.Intents.default()
 intents.reactions = True
 no_mentions=discord.AllowedMentions.none()
 
-bot = commands.Bot(command_prefix="/", intents=intents)
+bot = commands.Bot(command_prefix="!", intents=intents)
 tree = bot.tree
 
 conn = sqlite3.connect("SBCoin_ledger.db")
@@ -27,7 +28,15 @@ CREATE TABLE IF NOT EXISTS transactions (
 )
 ''')
 
+cursor.execute('''
+CREATE TABLE IF NOT EXISTS users (
+	userID TEXT NOT NULL,
+	username TEXT NOT NULL
+)
+''')
+
 conn.commit()
+
 
 def log(log_text):
 	"""
@@ -48,10 +57,41 @@ def log(log_text):
 	with open("log.txt", "a", encoding="utf-8") as f:
 		f.write(log_time + " - " + log_text + "\n")
 
+async def first_update():
+	log(f"Beginning first_update()")
+	cursor.execute("select awarder_id, receiver_id from transactions")
+	rows = cursor.fetchall()
+
+	for row in rows:
+		awarder_id, receiver_id = row
+
+		try:
+			await save_userID(awarder_id)
+		except Exception as ex:
+			log(f"Error when saving userID {awarder_id} - {ex}")
+
+		try:
+			await save_userID(receiver_id)
+		except Exception as ex:
+			log(f"Error when saving userID {receiver_id} - {ex}")
+
+async def save_userID(userID):
+	cursor.execute("Select * from users where userID=?", (userID,))
+	result = cursor.fetchone()
+
+	if not result:
+		discord_user = await bot.fetch_user(userID)
+		username = str(discord_user)
+		log(f"Saving userID {userID} -> {username}")
+		cursor.execute("Insert into users (userID, username) values (?,?)", (userID,username))
+		conn.commit()
+		await sleep(1)
+
 @bot.event
 async def on_ready():
 	log(f"Logged in as {bot.user}!")
 	await tree.sync()
+	await first_update()
 
 @bot.event
 async def on_raw_reaction_add(payload):
@@ -69,6 +109,8 @@ async def on_raw_reaction_add(payload):
 			if user is None:
 				log(f"User {payload.user_id} not found even after fetching.")
 				return
+
+			await save_userID(payload.user_id)
 
 			# Ignore if the user reacted to their own message
 			if message.author.id == user.id:
@@ -98,6 +140,8 @@ async def balance(interaction: discord.Interaction, user: discord.User = None, h
 	if user is None:
 		user = interaction.user
 
+	await save_userID(interaction.user.id)
+
 	cursor.execute(
 		'''SELECT SUM(amount) FROM transactions WHERE receiver_id = ?''', (user.id,)
 	)
@@ -115,6 +159,8 @@ async def balance(interaction: discord.Interaction, amount:int, hide:bool=False)
 	if not hide:
 		if cooldowns.get(interaction.user.id, 0) >= time()-60:
 			log(f"{interaction.user} tried to gamble {amount}, but is on cooldown.")
+			await interaction.response.send_message(f"You can't gamble yet as you are on cooldown. You can gamble silently with hide=True, or wait another {round(time()-cooldowns.get(interaction.user.id, 0))} seconds,", ephemeral=True)
+			return
 		else:
 			cooldowns[interaction.user.id] = int(time())
 
@@ -183,11 +229,14 @@ async def send(interaction: discord.Interaction, recipient: discord.User, amount
 
 	# Record the transaction
 	try:
+	    #recipient awards negative amount to user??
 		cursor.execute(
 			'''INSERT INTO transactions (awarder_id, receiver_id, message_id, amount)
 			VALUES (?, ?, ?, ?)''',
 			(recipient.id, interaction.user.id, interaction.id, -amount)
 		)
+
+		#user awards amount to recipient
 		cursor.execute(
 			'''INSERT INTO transactions (awarder_id, receiver_id, message_id, amount)
 			VALUES (?, ?, ?, ?)''',
@@ -203,5 +252,6 @@ async def send(interaction: discord.Interaction, recipient: discord.User, amount
 	except Exception as e:
 		await interaction.response.send_message("An error occurred while processing the transaction.")
 		log(f"Error processing send command: {e}")
+
 
 bot.run(oAuth_token)
