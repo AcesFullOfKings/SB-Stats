@@ -183,7 +183,7 @@ async def gamble(interaction: discord.Interaction, amount:int, hide:bool=False):
 		log(f"{interaction.user} tried to gamble {amount}, but it failed because they only have {user_balance}.")
 		return
 
-	if not(str(user) == "acesfullofkings") and (random.random() > 0.49 or str(user)=="violetsister"):
+	if random.random() > 0.49:
 		cursor.execute(
 			'''INSERT INTO transactions (awarder_id, receiver_id, message_id, amount)
 			VALUES (?, ?, ?, ?)''',
