@@ -3,9 +3,10 @@ import sqlite3
 import random
 
 from math        import ceil
-from time        import localtime, time
+from time        import localtime, time, timezone
 from asyncio     import sleep
 from discord     import app_commands
+from datetime    import datetime, timedelta, timezone
 from discord.ext import commands
 from credentials import oAuth_token
 
@@ -44,14 +45,14 @@ def log(log_text):
 	Takes a string, s, and logs it to a log file on disk with a timestamp. Also prints the string to console.
 	"""
 	current_time = localtime()
-	# year   = str(current_time.tm_year)
+	year   = str(current_time.tm_year)
 	month  = str(current_time.tm_mon ).zfill(2)
 	day    = str(current_time.tm_mday).zfill(2)
 	hour   = str(current_time.tm_hour).zfill(2)
 	minute = str(current_time.tm_min ).zfill(2)
 	second = str(current_time.tm_sec ).zfill(2)
 
-	log_time = f"{day}/{month} {hour}:{minute}:{second}"
+	log_time = f"{year}-{month}-{day} {hour}:{minute}:{second}"
 	log_text = log_text.replace("\n", "").replace("\r", "") # makes sure each log line is only one line
 
 	print(f"{hour}:{minute} - {log_text}")
@@ -119,6 +120,10 @@ async def on_raw_reaction_add(payload):
 			# Ignore if the user reacted to their own message
 			if message.author.id == user.id:
 				log(f"Ignoring own reaction from {user} ;)")
+				return
+
+			if (datetime.now(timezone.utc) - message.created_at >= timedelta(hours=12)):
+				log(f"Ignoring reaction from {user} on old message (by {message.author}).")
 				return
 
 			# Record the SBCoin transaction
@@ -219,7 +224,10 @@ async def send(interaction: discord.Interaction, recipient: discord.User, amount
 
 	cooldown_duration = max(120 - int(time()-send_cooldowns.get(interaction.user.id, 0)),0)
 
-	fee = ceil(amount*0.02)
+	epoch = 1735765200
+	hours_since_epoch = (time()-epoch)//3600
+	time_fee = 0.001 * hours_since_epoch
+	fee = ceil(amount*(0.02+time_fee))
 
 	if cooldown_duration:
 		log(f"{interaction.user} tried to send {amount} to {recipient}, but is on cooldown for {cooldown_duration}s.")
@@ -229,6 +237,8 @@ async def send(interaction: discord.Interaction, recipient: discord.User, amount
 	if amount <= 0:
 		await interaction.response.send_message("The amount must be a positive integer.", ephemeral=True)
 		return
+
+	send_cooldowns[interaction.user.id] = int(time())
 
 	if interaction.user.id == recipient.id:
 		await interaction.response.send_message("Don't be silly, you can't send coin to yourself.", ephemeral=True)
@@ -244,7 +254,6 @@ async def send(interaction: discord.Interaction, recipient: discord.User, amount
 		await interaction.response.send_message(f"You do not have enough SBCoin to send {amount} (+{fee} in fees). You currently have {sender_balance} but you need {amount+fee} for this transaction.", allowed_mentions=no_mentions, ephemeral=True)
 		return
 
-	send_cooldowns[interaction.user.id] = int(time())
 	send_cooldowns[recipient.id] = int(time())
 
 	# Record the transaction
@@ -269,9 +278,20 @@ async def send(interaction: discord.Interaction, recipient: discord.User, amount
 		)
 		recipient_balance = cursor.fetchone()[0] or 0
 		await interaction.response.send_message(f"{interaction.user.mention} sent {amount} SBCoin to {recipient.mention}. {interaction.user.mention} now has {sender_balance-(amount+fee)} and {recipient.mention} now has {recipient_balance}. This transaction cost {fee} SBCoin.",allowed_mentions=no_mentions)
+		log(f"{interaction.user} sent {amount} SBCoin to {recipient} (with a fee of {fee})")
 	except Exception as e:
 		await interaction.response.send_message("An error occurred while processing the transaction.")
 		log(f"Error processing send command: {e}")
-
+"""
+@bot.tree.command(name="say", description="Repeats your message. Only Aces can use this as it's for debugging.")
+@app_commands.describe(message="The message to say.")
+async def say(interaction: discord.Interaction, message:str):
+    if str(interaction.user) == "acesfullofkings":
+        log(f"{interaction.user} echoed: {message}")
+        await interaction.response.send_message(f"Aces says: {message}")
+    else:
+        log(f"{interaction.user} waas blocked from using the say command, with message: {message}")
+        return None
+"""
 
 bot.run(oAuth_token)
