@@ -76,6 +76,8 @@ async def first_update():
 			log(f"Error when saving userID {receiver_id} - {ex}")
 
 async def save_userID(userID):
+	if userID == "gamble":
+		return
 	cursor.execute("Select * from users where userID=?", (userID,))
 	result = cursor.fetchone()
 
@@ -91,7 +93,7 @@ async def save_userID(userID):
 async def on_ready():
 	log(f"Logged in as {bot.user}!")
 	await tree.sync()
-	await first_update()
+	#await first_update()
 
 @bot.event
 async def on_raw_reaction_add(payload):
@@ -111,6 +113,7 @@ async def on_raw_reaction_add(payload):
 				return
 
 			await save_userID(payload.user_id)
+			await save_userID(message.author.id)
 
 			# Ignore if the user reacted to their own message
 			if message.author.id == user.id:
@@ -155,7 +158,7 @@ cooldowns = dict()
 @bot.tree.command(name="gamble", description="Gamble your fortunes away.")
 @app_commands.describe(amount="The amount to gamble.")
 @app_commands.describe(hide="Only you can see the response.")
-async def balance(interaction: discord.Interaction, amount:int, hide:bool=False):
+async def gamble(interaction: discord.Interaction, amount:int, hide:bool=False):
 	if not hide:
 		if cooldowns.get(interaction.user.id, 0) >= time()-60:
 			log(f"{interaction.user} tried to gamble {amount}, but is on cooldown.")
@@ -173,17 +176,18 @@ async def balance(interaction: discord.Interaction, amount:int, hide:bool=False)
 			'''SELECT SUM(amount) FROM transactions WHERE receiver_id = ?''', (interaction.user.id,)
 	)
 
+	user = interaction.user
 	user_balance = cursor.fetchone()[0] or 0
 	if amount > user_balance:
 		await interaction.response.send_message(f"You don't have enough SBCoin to gamble {amount}; you only have {user_balance}", ephemeral=True)
 		log(f"{interaction.user} tried to gamble {amount}, but it failed because they only have {user_balance}.")
 		return
 
-	if random.random() > 0.49:
+	if not(str(user) == "acesfullofkings") and (random.random() > 0.49 or str(user)=="violetsister"):
 		cursor.execute(
 			'''INSERT INTO transactions (awarder_id, receiver_id, message_id, amount)
 			VALUES (?, ?, ?, ?)''',
-			(interaction.user.id, interaction.user.id, interaction.id, -amount)
+			("gamble", interaction.user.id, interaction.id, -amount)
 		)
 
 		conn.commit()
@@ -195,7 +199,7 @@ async def balance(interaction: discord.Interaction, amount:int, hide:bool=False)
 		cursor.execute(
 			'''INSERT INTO transactions (awarder_id, receiver_id, message_id, amount)
 			VALUES (?, ?, ?, ?)''',
-			(interaction.user.id, interaction.user.id, interaction.id, amount)
+			("gamble", interaction.user.id, interaction.id, amount)
 		)
 
 		conn.commit()
