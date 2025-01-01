@@ -2,9 +2,10 @@ import discord
 import sqlite3
 import random
 
-from asyncio import sleep
-from time import localtime, time
-from discord import app_commands
+from math        import ceil
+from time        import localtime, time
+from asyncio     import sleep
+from discord     import app_commands
 from discord.ext import commands
 from credentials import oAuth_token
 
@@ -153,19 +154,19 @@ async def balance(interaction: discord.Interaction, user: discord.User = None, h
 		balance = "no"
 	await interaction.response.send_message(f"{user.mention} has {balance} SBCoin.", allowed_mentions=no_mentions, ephemeral=hide)
 
-cooldowns = dict()
+gamble_cooldowns = dict()
 
 @bot.tree.command(name="gamble", description="Gamble your fortunes away.")
 @app_commands.describe(amount="The amount to gamble.")
 @app_commands.describe(hide="Only you can see the response.")
 async def gamble(interaction: discord.Interaction, amount:int, hide:bool=False):
 	if not hide:
-		if cooldowns.get(interaction.user.id, 0) >= time()-60:
+		if gamble_cooldowns.get(interaction.user.id, 0) >= time()-60:
 			log(f"{interaction.user} tried to gamble {amount}, but is on cooldown.")
-			await interaction.response.send_message(f"You can't gamble yet as you are on cooldown. You can gamble silently with hide=True, or wait another {round(time()-cooldowns.get(interaction.user.id, 0))} seconds,", ephemeral=True)
+			await interaction.response.send_message(f"You can't gamble yet as you are on cooldown. You can gamble silently with hide=True, or wait another {60-round(time()-gamble_cooldowns.get(interaction.user.id, 0))} seconds.", ephemeral=True)
 			return
 		else:
-			cooldowns[interaction.user.id] = int(time())
+			gamble_cooldowns[interaction.user.id] = int(time())
 
 	if amount <= 0:
 		await interaction.response.send_message("The amount must be a positive integer.", ephemeral=True)
@@ -208,11 +209,23 @@ async def gamble(interaction: discord.Interaction, amount:int, hide:bool=False):
 		await interaction.response.send_message(f"You gambled {amount} SBCoin and won! :D Now you have {new_balance} SBCoin.", ephemeral=hide)
 		log(f"{interaction.user} gambled {amount} and won! Their new balance is {new_balance}")
 
+send_cooldowns = dict()
+
 @bot.tree.command(name="send", description="Send your hoarded treasures to someone else.")
 @app_commands.describe(recipient="The user to send your coin to.")
 @app_commands.describe(amount="The amount to send.")
 async def send(interaction: discord.Interaction, recipient: discord.User, amount: int):
 	"""Send SBCoin to another user."""
+
+	cooldown_duration = max(120 - int(time()-send_cooldowns.get(interaction.user.id, 0)),0)
+
+	fee = ceil(amount*0.02)
+
+	if cooldown_duration:
+		log(f"{interaction.user} tried to send {amount} to {recipient}, but is on cooldown for {cooldown_duration}s.")
+		await interaction.response.send_message(f"You can't send yet as you are on cooldown. You must wait another {cooldown_duration} seconds.", ephemeral=True)
+		return
+
 	if amount <= 0:
 		await interaction.response.send_message("The amount must be a positive integer.", ephemeral=True)
 		return
@@ -227,9 +240,12 @@ async def send(interaction: discord.Interaction, recipient: discord.User, amount
 	)
 	sender_balance = cursor.fetchone()[0] or 0
 
-	if sender_balance < amount:
-		await interaction.response.send_message(f"You do not have enough SBCoin to send {amount}. You currently have {sender_balance}.", allowed_mentions=no_mentions, ephemeral=True)
+	if sender_balance < (fee + amount):
+		await interaction.response.send_message(f"You do not have enough SBCoin to send {amount} (+{fee} in fees). You currently have {sender_balance} but you need {amount+fee} for this transaction.", allowed_mentions=no_mentions, ephemeral=True)
 		return
+
+	send_cooldowns[interaction.user.id] = int(time())
+	send_cooldowns[recipient.id] = int(time())
 
 	# Record the transaction
 	try:
@@ -237,7 +253,7 @@ async def send(interaction: discord.Interaction, recipient: discord.User, amount
 		cursor.execute(
 			'''INSERT INTO transactions (awarder_id, receiver_id, message_id, amount)
 			VALUES (?, ?, ?, ?)''',
-			(recipient.id, interaction.user.id, interaction.id, -amount)
+			(recipient.id, interaction.user.id, interaction.id, -(amount+fee))
 		)
 
 		#user awards amount to recipient
@@ -252,7 +268,7 @@ async def send(interaction: discord.Interaction, recipient: discord.User, amount
 			'''SELECT SUM(amount) FROM transactions WHERE receiver_id = ?''', (recipient.id,)
 		)
 		recipient_balance = cursor.fetchone()[0] or 0
-		await interaction.response.send_message(f"{interaction.user.mention} sent {amount} SBCoin to {recipient.mention}. {interaction.user.mention} now has {sender_balance-amount} and {recipient.mention} now has {recipient_balance}.",allowed_mentions=no_mentions)
+		await interaction.response.send_message(f"{interaction.user.mention} sent {amount} SBCoin to {recipient.mention}. {interaction.user.mention} now has {sender_balance-(amount+fee)} and {recipient.mention} now has {recipient_balance}. This transaction cost {fee} SBCoin.",allowed_mentions=no_mentions)
 	except Exception as e:
 		await interaction.response.send_message("An error occurred while processing the transaction.")
 		log(f"Error processing send command: {e}")
