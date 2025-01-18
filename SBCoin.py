@@ -42,7 +42,7 @@ conn.commit()
 
 def log(log_text):
 	"""
-	Takes a string, s, and logs it to a log file on disk with a timestamp. Also prints the string to console.
+	Takes a string and logs it to a log file on disk with a timestamp. Also prints the string to console.
 	"""
 	current_time = localtime()
 	year   = str(current_time.tm_year)
@@ -224,10 +224,10 @@ async def send(interaction: discord.Interaction, recipient: discord.User, amount
 
 	cooldown_duration = max(120 - int(time()-send_cooldowns.get(interaction.user.id, 0)),0)
 
-	epoch = 1735765200
-	hours_since_epoch = (time()-epoch)//3600
-	time_fee = 0.001 * hours_since_epoch
-	fee = ceil(amount*(0.02+time_fee))
+	#epoch = 1735765200
+	#hours_since_epoch = (time()-epoch)//3600
+	#time_fee = 0.001 * hours_since_epoch
+	fee = int(amount*0.02)
 
 	if cooldown_duration:
 		log(f"{interaction.user} tried to send {amount} to {recipient}, but is on cooldown for {cooldown_duration}s.")
